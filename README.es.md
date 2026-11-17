@@ -22,7 +22,7 @@ make doctor
 | Paso | Lección | Tag |
 |------|---------|-----|
 | 0 | [Setup](lessons/00-setup/README.es.md) | `step-00` |
-| 1 | Embeddings | próximamente |
+| 1 | [Embeddings](lessons/01-embeddings/README.es.md) | `step-01` |
 | 2 | Chunking e ingesta | próximamente |
 | 3 | Primer RAG | próximamente |
 | 4 | Citas y umbral | próximamente |

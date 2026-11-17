@@ -1,0 +1,5 @@
+# Per-embedding-model facts. Vectors from different models are not comparable,
+# so everything that depends on the model lives here (ADR-0005, ADR-0006).
+embedding_models:
+  bge-m3:
+    dimension: 1024

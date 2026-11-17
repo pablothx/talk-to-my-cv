@@ -22,7 +22,7 @@ make doctor
 | Step | Lesson | Tag |
 |------|--------|-----|
 | 0 | [Setup](lessons/00-setup/README.md) | `step-00` |
-| 1 | Embeddings | coming soon |
+| 1 | [Embeddings](lessons/01-embeddings/README.md) | `step-01` |
 | 2 | Chunking and ingestion | coming soon |
 | 3 | First RAG | coming soon |
 | 4 | Citations and threshold | coming soon |
