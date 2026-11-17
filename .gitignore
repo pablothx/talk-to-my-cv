@@ -1,0 +1,35 @@
+# Secretos
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Datos locales de contenedores
+data/
+volumes/
+pgdata/
+opensearch-data/
+ollama/
+
+# Borradores de la base de conocimiento (no publicar)
+kb/_drafts/
+
+# Corridas crudas de evaluación (los resúmenes sí se commitean)
+eval/results/raw/
+
+# Editor y sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
