@@ -52,3 +52,18 @@ def test_question_goes_only_in_the_user_message():
     assert [m["role"] for m in messages] == ["system", "user"]
     assert messages[1]["content"] == question
     assert question not in messages[0]["content"]
+
+
+def test_detected_language_is_stated_explicitly_at_the_end_of_the_rules():
+    system = build_prompt("¿Qué lideró?", RESULTS)[0]["content"]
+
+    assert system.rstrip().endswith(
+        "The question is in Spanish. Write your whole answer in Spanish, "
+        "even if the CONTEXT is in another language."
+    )
+
+
+def test_no_language_line_when_the_language_is_unclear():
+    system = build_prompt("Kubernetes?", RESULTS)[0]["content"]
+
+    assert "The question is in" not in system

@@ -3,3 +3,7 @@
 embedding_models:
   bge-m3:
     dimension: 1024
+    # Minimum top-1 cosine similarity to answer at all. Provisional (step 4):
+    # answerable questions scored 0.51–0.65, an off-topic one 0.41.
+    # Step 5 calibrates it with the eval. Override with RELEVANCE_THRESHOLD.
+    relevance_threshold: 0.45

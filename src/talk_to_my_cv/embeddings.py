@@ -8,7 +8,7 @@ from typing import Protocol
 import ollama
 import yaml
 
-from talk_to_my_cv.config import Settings
+from talk_to_my_cv.config import Settings, read_env
 
 Vector = Sequence[float]
 
@@ -59,11 +59,31 @@ class OllamaEmbedder:
 MODELS_FILE = Path(__file__).resolve().parents[2] / "config" / "models.yaml"
 
 
-def embedding_dimension(model: str, models_file: Path = MODELS_FILE) -> int:
+def _model_config(model: str, models_file: Path) -> dict:
     models = yaml.safe_load(models_file.read_text())["embedding_models"]
     if model not in models:
         raise ValueError(f"unknown embedding model {model!r}: add it to {models_file}")
-    return models[model]["dimension"]
+    return models[model]
+
+
+def embedding_dimension(model: str, models_file: Path = MODELS_FILE) -> int:
+    return _model_config(model, models_file)["dimension"]
+
+
+def relevance_threshold(
+    model: str, env: Mapping[str, str] | None = None, models_file: Path = MODELS_FILE
+) -> float:
+    """Minimum top-1 similarity to answer at all (ADR-0006). RELEVANCE_THRESHOLD overrides."""
+    env = read_env() if env is None else env
+    if env.get("RELEVANCE_THRESHOLD"):
+        return float(env["RELEVANCE_THRESHOLD"])
+    config = _model_config(model, models_file)
+    if "relevance_threshold" not in config:
+        raise ValueError(
+            f"{model} has no relevance_threshold in {models_file.name}: "
+            "scores differ per model, so each one needs its own (step 5 calibrates it)"
+        )
+    return float(config["relevance_threshold"])
 
 
 def build_embedder(settings: Settings) -> OllamaEmbedder:

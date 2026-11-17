@@ -25,7 +25,7 @@ make doctor
 | 1 | [Embeddings](lessons/01-embeddings/README.md) | `step-01` |
 | 2 | [Chunking and ingestion](lessons/02-chunking-ingestion/README.md) | `step-02` |
 | 3 | [First RAG](lessons/03-first-rag/README.md) | `step-03` |
-| 4 | Citations and threshold | coming soon |
+| 4 | [Citations and threshold](lessons/04-citations-threshold/README.md) | `step-04` |
 | 5 | Evaluation | coming soon |
 
 ## Use it with your own CV

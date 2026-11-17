@@ -6,7 +6,7 @@ import time
 
 from talk_to_my_cv.chat_models import build_chat_model
 from talk_to_my_cv.config import load_settings
-from talk_to_my_cv.embeddings import build_embedder, cosine_similarity
+from talk_to_my_cv.embeddings import build_embedder, cosine_similarity, relevance_threshold
 from talk_to_my_cv.ingest import EmbeddingModelMismatch
 from talk_to_my_cv.ingest import ingest as run_ingest
 from talk_to_my_cv.rag import Answer, answer
@@ -41,13 +41,19 @@ def ingest(rebuild: bool) -> int:
     return 0
 
 
-def _print_answer(result: Answer, debug: bool, seconds: float) -> None:
+def _print_answer(result: Answer, threshold: float, debug: bool, seconds: float) -> None:
     if debug:
-        print("── retrieved context ──")
+        print(f"── retrieved (threshold {threshold:.2f}; ✓ = sent to the LLM) ──")
         for r in result.retrieved:
-            print(f"  {r.score:.3f}  {r.chunk.file} § {r.chunk.section}")
-        print(f"── answer ({seconds:.1f}s) ──")
+            mark = "✓" if r in result.context else " "
+            print(f"  {mark} {r.score:.3f}  {r.chunk.file} § {r.chunk.section}")
+        llm = "LLM called" if result.context else "LLM not called"
+        print(f"── answer ({seconds:.1f}s, {llm}) ──")
     print(result.text)
+    if result.citations:
+        print("\nSources:")
+        for citation in result.citations:
+            print(f"  - {citation}")
 
 
 def ask(questions: list[str], debug: bool) -> int:
@@ -55,6 +61,7 @@ def ask(questions: list[str], debug: bool) -> int:
     settings = load_settings()
     embedder, chat = build_embedder(settings), build_chat_model(settings)
     store = PgVectorStore(settings.database_url)
+    threshold = relevance_threshold(settings.embed_model)
     interactive = not questions
     if interactive:
         print(
@@ -74,8 +81,8 @@ def ask(questions: list[str], debug: bool) -> int:
         else:
             break
         start = time.perf_counter()
-        result = answer(question, embedder, store, chat)
-        _print_answer(result, debug, time.perf_counter() - start)
+        result = answer(question, embedder, store, chat, threshold=threshold)
+        _print_answer(result, threshold, debug, time.perf_counter() - start)
     return 0
 
 

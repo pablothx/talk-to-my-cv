@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv run
 
-.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03
+.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03 check-04
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -62,3 +62,7 @@ check-02: check-01 ## Step 2: chunking and ingestion
 check-03: check-02 ## Step 3: first RAG (uses the configured LLM_PROVIDER)
 	$(UV) pytest -m e2e tests/test_rag_e2e.py
 	@echo "✓ step 03 OK"
+
+check-04: check-03 ## Step 4: citations and relevance gate
+	$(UV) pytest -m e2e tests/test_citations_e2e.py
+	@echo "✓ step 04 OK"

@@ -26,7 +26,8 @@ def ask():
     store = PgVectorStore(settings.database_url, schema="test_rag")
     ingest(KB, embedder, store)
     chat = build_chat_model(settings)
-    return lambda question: answer(question, embedder, store, chat).text
+    # Step 3 behaviour: no relevance gate, refusals come from the prompt alone.
+    return lambda question: answer(question, embedder, store, chat, threshold=0.0).text
 
 
 def test_answerable_question_returns_the_planted_fact(ask):

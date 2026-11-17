@@ -31,9 +31,14 @@ class Settings(BaseModel):
         return self
 
 
+def read_env() -> dict[str, str]:
+    """`.env` overlaid with the process environment (the process wins)."""
+    return {k: v for k, v in {**dotenv_values(".env"), **os.environ}.items() if v is not None}
+
+
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """Build settings from `env`; by default, `.env` overlaid with the process environment."""
     if env is None:
-        env = {**dotenv_values(".env"), **os.environ}
+        env = read_env()
     fields = {name: env[name.upper()] for name in Settings.model_fields if env.get(name.upper())}
     return Settings(**fields)
