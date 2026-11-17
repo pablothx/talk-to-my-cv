@@ -18,7 +18,7 @@ from talk_to_my_cv.evaluation import (
 from talk_to_my_cv.ingest import EmbeddingModelMismatch
 from talk_to_my_cv.ingest import ingest as run_ingest
 from talk_to_my_cv.rag import Answer, answer
-from talk_to_my_cv.store import PgVectorStore, SearchMode
+from talk_to_my_cv.store import SearchMode, build_store
 from talk_to_my_cv.sweep_plot import plot_sweep
 
 
@@ -37,14 +37,15 @@ def similarity(a: str, b: str) -> None:
 
 def ingest(rebuild: bool) -> int:
     settings = load_settings()
-    store = PgVectorStore(settings.database_url)
+    store = build_store(settings.vector_store, settings)
     try:
         report = run_ingest(settings.kb_dir, build_embedder(settings), store, rebuild=rebuild)
     except EmbeddingModelMismatch as error:
         print(f"✗ {error}")
         return 1
     print(
-        f"{settings.kb_dir}: {report.added} added, {report.updated} updated, "
+        f"{settings.kb_dir} → {settings.vector_store}: "
+        f"{report.added} added, {report.updated} updated, "
         f"{report.unchanged} unchanged, {report.deleted} deleted"
     )
     return 0
@@ -69,7 +70,8 @@ def ask(questions: list[str], debug: bool) -> int:
     """Answer each question; with no questions, read them interactively (REPL)."""
     settings = load_settings()
     embedder, chat = build_embedder(settings), build_chat_model(settings)
-    store = PgVectorStore(settings.database_url)
+    store = build_store(settings.vector_store, settings)
+    mode = SearchMode(settings.search_mode)
     threshold = relevance_threshold(settings.embed_model)
     interactive = not questions
     if interactive:
@@ -90,7 +92,7 @@ def ask(questions: list[str], debug: bool) -> int:
         else:
             break
         start = time.perf_counter()
-        result = answer(question, embedder, store, chat, threshold=threshold)
+        result = answer(question, embedder, store, chat, threshold=threshold, mode=mode)
         _print_answer(result, threshold, debug, time.perf_counter() - start)
     return 0
 
@@ -99,15 +101,15 @@ ROOT = Path(__file__).resolve().parents[2]
 EVAL_KB = ROOT / "kb.example"
 QUESTIONS = ROOT / "eval" / "questions.yaml"
 RESULTS = ROOT / "eval" / "results"
-STORES = {"pgvector": lambda settings: PgVectorStore(settings.database_url, schema="eval")}
 
 
 def _eval_setup(store_name: str):
     """The eval always runs against kb.example/, in its own schema, whatever KB_DIR says."""
     settings = load_settings()
-    if store_name not in STORES:
-        raise SystemExit(f"unknown STORE {store_name!r}; available: {', '.join(STORES)}")
-    store = STORES[store_name](settings)
+    try:
+        store = build_store(store_name, settings, namespace="eval")
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
     embedder = build_embedder(settings)
     run_ingest(EVAL_KB, embedder, store)
     return settings, store, embedder

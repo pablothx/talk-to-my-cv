@@ -44,3 +44,22 @@ def test_each_provider_has_its_own_model_so_switching_is_one_line():
 
     assert ollama.chat_model == "qwen2.5:3b"
     assert groq.chat_model == "llama-3.3-70b-versatile"
+
+
+def test_store_and_search_mode_default_to_the_step_2_setup():
+    settings = load_settings(env={})
+
+    assert settings.vector_store == "pgvector"
+    assert settings.search_mode == "vector"
+
+
+def test_store_and_search_mode_are_validated():
+    with pytest.raises(ValueError, match="pgvector.*opensearch"):
+        load_settings(env={"VECTOR_STORE": "chroma"})
+    with pytest.raises(ValueError, match="vector.*keyword.*hybrid"):
+        load_settings(env={"SEARCH_MODE": "semantic"})
+
+
+def test_a_mode_the_store_cannot_do_fails_at_startup():
+    with pytest.raises(ValueError, match="pgvector.*hybrid.*opensearch"):
+        load_settings(env={"VECTOR_STORE": "pgvector", "SEARCH_MODE": "hybrid"})

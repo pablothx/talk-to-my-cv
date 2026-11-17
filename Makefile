@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv run
 
-.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03 check-04 eval eval-sweep check-05
+.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03 check-04 eval eval-sweep eval-all check-05 check-06
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -55,6 +55,11 @@ eval: ## Run eval/questions.yaml (STORE=pgvector MODE=vector THRESHOLD=...)
 eval-sweep: ## Sweep relevance thresholds (no LLM) and plot eval/results/threshold-sweep_*.png
 	@$(UV) python -m talk_to_my_cv.cli eval-sweep --store $(STORE)
 
+eval-all: ## Eval every store × mode combination (unsupported ones are reported as skipped)
+	@for combo in pgvector:vector pgvector:hybrid opensearch:vector opensearch:keyword opensearch:hybrid; do \
+		$(MAKE) -s eval STORE=$${combo%%:*} MODE=$${combo##*:} | grep -E "^- |^\| (refusal|answer)_accuracy|^\| (hit@5|mrr)|Skipped"; \
+	done
+
 check-00: test up doctor ## Step 0: skeleton, config and doctor
 	$(UV) pre-commit run --all-files
 	@echo "✓ step 00 OK"
@@ -79,3 +84,7 @@ check-04: check-03 ## Step 4: citations and relevance gate
 check-05: check-04 ## Step 5: evaluation
 	$(UV) pytest -m e2e tests/test_eval_e2e.py
 	@echo "✓ step 05 OK"
+
+check-06: check-05 ## Step 6: OpenSearch and hybrid search
+	$(UV) pytest -m e2e tests/test_hybrid_e2e.py
+	@echo "✓ step 06 OK"

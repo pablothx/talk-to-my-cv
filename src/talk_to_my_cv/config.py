@@ -18,6 +18,9 @@ class Settings(BaseModel):
     groq_api_key: str | None = None
     groq_model: str = "llama-3.3-70b-versatile"
     database_url: str = "postgresql://postgres:postgres@localhost:5432/talk_to_my_cv"
+    opensearch_url: str = "http://localhost:9200"
+    vector_store: Literal["pgvector", "opensearch"] = "pgvector"
+    search_mode: Literal["vector", "keyword", "hybrid"] = "vector"
 
     @property
     def chat_model(self) -> str:
@@ -28,6 +31,15 @@ class Settings(BaseModel):
     def _groq_needs_a_key(self) -> "Settings":
         if self.llm_provider == "groq" and not self.groq_api_key:
             raise ValueError("LLM_PROVIDER=groq needs GROQ_API_KEY (set it in .env)")
+        return self
+
+    @model_validator(mode="after")
+    def _mode_fits_the_store(self) -> "Settings":
+        if self.vector_store == "pgvector" and self.search_mode != "vector":
+            raise ValueError(
+                f"VECTOR_STORE=pgvector only does vector search, not {self.search_mode}: "
+                "use VECTOR_STORE=opensearch for keyword or hybrid (ADR-0007)"
+            )
         return self
 
 

@@ -6,6 +6,7 @@ import pytest
 
 from talk_to_my_cv.chunking import Chunk
 from talk_to_my_cv.config import load_settings
+from talk_to_my_cv.embeddings import cosine_similarity
 from talk_to_my_cv.store import (
     EmbeddingModel,
     InMemoryStore,
@@ -41,10 +42,19 @@ def _pgvector_store():
     return store
 
 
+def _opensearch_store():
+    from talk_to_my_cv.store_opensearch import OpenSearchStore
+
+    store = OpenSearchStore(load_settings().opensearch_url, index="test-contract")
+    store.reset()
+    return store
+
+
 @pytest.fixture(
     params=[
         pytest.param(InMemoryStore, id="memory"),
         pytest.param(_pgvector_store, id="pgvector", marks=pytest.mark.e2e),
+        pytest.param(_opensearch_store, id="opensearch", marks=pytest.mark.e2e),
     ]
 )
 def store(request):
@@ -63,6 +73,8 @@ def test_search_returns_closest_chunks_first_with_scores_between_0_and_1(store):
 
     assert [r.chunk.id for r in results] == ["a", "b"]
     assert all(0.0 <= r.score <= 1.0 for r in results)
+    # The score is the cosine similarity itself, in every store: the gate depends on it.
+    assert results[0].score == pytest.approx(cosine_similarity(_unit(1, 0.1, 0), _unit(1, 0, 0)))
     assert results[0].score > results[1].score
     assert results[0].chunk == _chunk("a")
 
@@ -84,20 +96,52 @@ def test_delete_removes_chunks(store):
     assert set(store.fingerprints()) == {"b"}
 
 
-@pytest.mark.parametrize("mode", [SearchMode.KEYWORD, SearchMode.HYBRID])
-def test_keyword_and_hybrid_are_not_supported_yet(store, mode):
-    with pytest.raises(UnsupportedSearchMode):
-        store.search("q", _unit(1, 0, 0), mode=mode, k=5)
-
-
-def test_embedding_model_is_remembered(store):
-    assert store.get_model() == MODEL
-
-
-def test_reset_forgets_chunks_and_model(store):
+@pytest.mark.parametrize("mode", list(SearchMode))
+def test_unsupported_modes_raise_and_supported_ones_answer(store, mode):
     store.upsert([_chunk("a")], [_unit(1, 0, 0)])
 
-    store.reset()
+    if mode not in store.supported_modes:
+        with pytest.raises(UnsupportedSearchMode):
+            store.search("q", _unit(1, 0, 0), mode=mode, k=5)
+    else:
+        assert store.search("text", _unit(1, 0, 0), mode=mode, k=5)
 
-    assert store.get_model() is None
-    assert store.fingerprints() == {}
+
+def test_keyword_search_finds_the_exact_term_the_vectors_miss(store):
+    if SearchMode.KEYWORD not in store.supported_modes:
+        pytest.skip("store has no keyword search")
+    store.upsert(
+        [_chunk("java", "Java 21 and Kotlin."), _chunk("k8s", "Never used Kubernetes.")],
+        [_unit(1, 0, 0), _unit(0, 1, 0)],
+    )
+
+    results = store.search("Did she use Kubernetes?", _unit(1, 0, 0), mode=SearchMode.KEYWORD, k=5)
+
+    assert [r.chunk.id for r in results] == ["k8s"]
+    assert results[0].score == pytest.approx(0.0, abs=1e-6)  # still cosine, not BM25
+
+
+def test_hybrid_combines_both_signals(store):
+    if SearchMode.HYBRID not in store.supported_modes:
+        pytest.skip("store has no hybrid search")
+    store.upsert(
+        [_chunk("java", "Java 21 and Kotlin."), _chunk("k8s", "Never used Kubernetes.")],
+        [_unit(1, 0, 0), _unit(0, 1, 0)],
+    )
+
+    results = store.search("Did she use Kubernetes?", _unit(1, 0.2, 0), mode=SearchMode.HYBRID, k=5)
+
+    assert {r.chunk.id for r in results} == {"java", "k8s"}
+    assert results[0].chunk.id == "k8s"  # the exact term outweighs a closer vector
+
+
+def test_question_words_alone_do_not_match(store):
+    if SearchMode.KEYWORD not in store.supported_modes:
+        pytest.skip("store has no keyword search")
+    store.upsert([_chunk("a", "She led the team, with care.")], [_unit(1, 0, 0)])
+
+    results = store.search(
+        "Has she worked with JavaScript?", _unit(1, 0, 0), mode=SearchMode.KEYWORD, k=5
+    )
+
+    assert results == []

@@ -1,0 +1,19 @@
+{
+  "name": "2026-11-17_opensearch_keyword_bge-m3",
+  "store": "opensearch",
+  "mode": "keyword",
+  "embed_model": "bge-m3",
+  "chat_model": "qwen2.5:3b",
+  "threshold": 0.42,
+  "k": 5,
+  "skipped": null,
+  "metrics": {
+    "questions": 17,
+    "hit@5": 0.6363636363636364,
+    "mrr": 0.5151515151515151,
+    "refusal_accuracy": 0.7058823529411765,
+    "answer_accuracy": 0.7058823529411765,
+    "hallucinated_no": 0,
+    "language_ok": 1.0
+  }
+}

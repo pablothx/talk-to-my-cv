@@ -16,6 +16,24 @@ services:
       timeout: 3s
       retries: 20
 
+  # Step 6: BM25 + k-NN hybrid search. Local only: security plugin disabled.
+  opensearch:
+    image: opensearchproject/opensearch:2.19.2
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "${OPENSEARCH_PORT:-9200}:9200"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
   # Optional: only if you don't run Ollama natively (`docker compose --profile ollama up -d`).
   # It publishes the same port as native Ollama, so run one or the other.
   ollama:
@@ -28,4 +46,5 @@ services:
 
 volumes:
   pgdata:
+  opensearch-data:
   ollama:

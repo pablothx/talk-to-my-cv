@@ -1,0 +1,11 @@
+{
+  "name": "2026-11-17_pgvector_hybrid_bge-m3",
+  "store": "pgvector",
+  "mode": "hybrid",
+  "embed_model": "bge-m3",
+  "chat_model": "qwen2.5:3b",
+  "threshold": 0.42,
+  "k": 5,
+  "skipped": "PgVectorStore does not support 'hybrid' search (yet)",
+  "metrics": null
+}

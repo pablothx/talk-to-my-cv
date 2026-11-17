@@ -41,6 +41,8 @@ class SearchResult:
 
 
 class VectorStore(Protocol):
+    supported_modes: frozenset[SearchMode]
+
     def get_model(self) -> EmbeddingModel | None: ...
     def set_model(self, model: EmbeddingModel) -> None: ...
     def fingerprints(self) -> dict[str, str]: ...
@@ -54,6 +56,8 @@ class VectorStore(Protocol):
 
 class InMemoryStore:
     """A dict-backed store for unit tests. Same contract as the real ones."""
+
+    supported_modes = frozenset({SearchMode.VECTOR})
 
     def __init__(self) -> None:
         self.reset()
@@ -78,7 +82,7 @@ class InMemoryStore:
     def search(
         self, query: str, query_vector: Vector, mode: SearchMode, k: int
     ) -> list[SearchResult]:
-        if mode != SearchMode.VECTOR:
+        if mode not in self.supported_modes:
             raise UnsupportedSearchMode("InMemoryStore", mode)
         scored = [
             SearchResult(chunk, max(0.0, cosine_similarity(query_vector, vector)))
@@ -93,6 +97,8 @@ class InMemoryStore:
 
 class PgVectorStore:
     """Postgres + pgvector. Creates its own schema on first use (ADR-0005)."""
+
+    supported_modes = frozenset({SearchMode.VECTOR})
 
     def __init__(self, url: str, schema: str = "public") -> None:
         self.url = url
@@ -182,7 +188,7 @@ class PgVectorStore:
     def search(
         self, query: str, query_vector: Vector, mode: SearchMode, k: int
     ) -> list[SearchResult]:
-        if mode != SearchMode.VECTOR:
+        if mode not in self.supported_modes:
             raise UnsupportedSearchMode("PgVectorStore", mode)
         with self._connect() as conn:
             rows = conn.execute(
@@ -199,3 +205,16 @@ class PgVectorStore:
         with self._connect(register=False) as conn:
             conn.execute(self._q("DROP TABLE IF EXISTS {schema}.chunks"))
             conn.execute(self._q("DELETE FROM {schema}.kb_meta"))
+
+
+def build_store(name: str, settings, namespace: str = "kb") -> VectorStore:
+    """`namespace` separates the user's KB from the eval's copy of kb.example/."""
+    if name == "opensearch":
+        from talk_to_my_cv.store_opensearch import OpenSearchStore
+
+        return OpenSearchStore(settings.opensearch_url, index=namespace)
+    if name == "pgvector":
+        return PgVectorStore(
+            settings.database_url, schema="public" if namespace == "kb" else namespace
+        )
+    raise ValueError(f"unknown vector store {name!r}: pgvector or opensearch")

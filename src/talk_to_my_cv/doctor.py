@@ -20,6 +20,7 @@ class Probes(Protocol):
     def ollama_reachable(self, host: str) -> bool: ...
     def ollama_models(self, host: str) -> set[str]: ...
     def groq_reachable(self, api_key: str) -> bool: ...
+    def opensearch_reachable(self, url: str) -> bool: ...
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,20 @@ def _has_model(available: set[str], wanted: str) -> bool:
     return wanted in available or f"{wanted}:latest" in available
 
 
+def _store_check(probes: Probes, settings: Settings) -> Check:
+    if settings.vector_store == "opensearch":
+        return Check(
+            "OpenSearch reachable",
+            probes.opensearch_reachable(settings.opensearch_url),
+            "`docker compose up -d` (OpenSearch takes ~1 min to start) and check OPENSEARCH_URL",
+        )
+    return Check(
+        "Postgres reachable",
+        probes.postgres_reachable(settings.database_url),
+        "`docker compose up -d` and check DATABASE_URL",
+    )
+
+
 def run_doctor(probes: Probes, settings: Settings) -> DoctorReport:
     ollama_up = probes.ollama_reachable(settings.ollama_host)
     checks = [
@@ -62,11 +77,7 @@ def run_doctor(probes: Probes, settings: Settings) -> DoctorReport:
         Check(
             "Docker running", probes.docker_running(), "start Docker, then `docker compose up -d`"
         ),
-        Check(
-            "Postgres reachable",
-            probes.postgres_reachable(settings.database_url),
-            "`docker compose up -d` and check DATABASE_URL",
-        ),
+        _store_check(probes, settings),
         Check(
             "Ollama reachable",
             ollama_up,
@@ -130,6 +141,13 @@ class SystemProbes:
     def ollama_models(self, host: str) -> set[str]:
         with urllib.request.urlopen(f"{host}/api/tags", timeout=3) as response:
             return {m["name"] for m in json.load(response)["models"]}
+
+    def opensearch_reachable(self, url: str) -> bool:
+        try:
+            with urllib.request.urlopen(f"{url}/_cluster/health", timeout=3) as response:
+                return json.load(response)["status"] in {"green", "yellow"}
+        except OSError:
+            return False
 
     def groq_reachable(self, api_key: str) -> bool:
         request = urllib.request.Request(

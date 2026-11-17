@@ -12,6 +12,7 @@ class FakeProbes:
     ollama: bool = True
     models: set[str] = field(default_factory=lambda: {"qwen2.5:3b", "bge-m3:latest"})
     groq: bool = True
+    opensearch: bool = True
 
     def uv_installed(self) -> bool:
         return self.uv
@@ -30,6 +31,9 @@ class FakeProbes:
 
     def groq_reachable(self, api_key: str) -> bool:
         return self.groq
+
+    def opensearch_reachable(self, url: str) -> bool:
+        return self.opensearch
 
 
 def test_healthy_stack_passes_with_exit_code_zero():
@@ -90,3 +94,23 @@ def test_ollama_provider_does_not_call_groq():
     names = [c.name for c in run_doctor(FakeProbes(), load_settings(env={})).checks]
 
     assert "Groq API reachable" not in names
+
+
+def test_opensearch_is_checked_only_when_it_is_the_configured_store():
+    probes = FakeProbes()
+
+    pg = [c.name for c in run_doctor(probes, load_settings(env={})).checks]
+    os_report = run_doctor(probes, load_settings(env={"VECTOR_STORE": "opensearch"}))
+
+    assert "OpenSearch reachable" not in pg
+    assert "OpenSearch reachable" in [c.name for c in os_report.checks]
+    assert "Postgres reachable" not in [c.name for c in os_report.checks]
+
+
+def test_opensearch_down_fails_with_a_hint():
+    probes = FakeProbes(opensearch=False)
+
+    report = run_doctor(probes, load_settings(env={"VECTOR_STORE": "opensearch"}))
+
+    assert report.exit_code != 0
+    assert "docker compose up -d" in report.render()
