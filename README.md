@@ -24,7 +24,7 @@ make doctor
 | 0 | [Setup](lessons/00-setup/README.md) | `step-00` |
 | 1 | [Embeddings](lessons/01-embeddings/README.md) | `step-01` |
 | 2 | [Chunking and ingestion](lessons/02-chunking-ingestion/README.md) | `step-02` |
-| 3 | First RAG | coming soon |
+| 3 | [First RAG](lessons/03-first-rag/README.md) | `step-03` |
 | 4 | Citations and threshold | coming soon |
 | 5 | Evaluation | coming soon |
 

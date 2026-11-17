@@ -19,3 +19,15 @@ class FakeEmbedder:
     def _vector(self, text: str) -> list[float]:
         digest = hashlib.sha256(text.encode()).digest()
         return [b / 255 + 0.01 for b in digest[: self.dimension]]
+
+
+class FakeChatModel:
+    """Returns a canned reply and records every conversation it was given."""
+
+    def __init__(self, reply: str = "She led Project Lumen."):
+        self.reply = reply
+        self.calls: list[list[dict[str, str]]] = []
+
+    def complete(self, messages: list[dict[str, str]]) -> str:
+        self.calls.append(messages)
+        return self.reply

@@ -16,7 +16,13 @@ class Settings(BaseModel):
     ollama_host: str = "http://localhost:11434"
     kb_dir: Path = Path("kb.example")
     groq_api_key: str | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
     database_url: str = "postgresql://postgres:postgres@localhost:5432/talk_to_my_cv"
+
+    @property
+    def chat_model(self) -> str:
+        """The model that writes answers, for the selected provider."""
+        return self.groq_model if self.llm_provider == "groq" else self.llm_model
 
     @model_validator(mode="after")
     def _groq_needs_a_key(self) -> "Settings":

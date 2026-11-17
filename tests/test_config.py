@@ -36,3 +36,11 @@ def test_groq_with_api_key_is_accepted():
     settings = load_settings(env={"LLM_PROVIDER": "groq", "GROQ_API_KEY": "gsk_test"})
 
     assert settings.llm_provider == "groq"
+
+
+def test_each_provider_has_its_own_model_so_switching_is_one_line():
+    ollama = load_settings(env={})
+    groq = load_settings(env={"LLM_PROVIDER": "groq", "GROQ_API_KEY": "gsk_test"})
+
+    assert ollama.chat_model == "qwen2.5:3b"
+    assert groq.chat_model == "llama-3.3-70b-versatile"

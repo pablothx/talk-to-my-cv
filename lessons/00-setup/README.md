@@ -78,7 +78,7 @@ You should see:
 
 ### No GPU
 
-> TODO (step 3): real tokens-per-second numbers on a machine without a GPU, and why `LLM_PROVIDER=groq` makes sense there.
+On a Ryzen 7 4700U with no GPU, `qwen2.5:3b` generates 3 to 4 tokens per second: an answer takes 11 to 25 seconds. It works, but it isn't a fluent conversation. If your machine is similar, set `LLM_PROVIDER=groq` and a free `GROQ_API_KEY`. Embeddings stay local. Full numbers in [lesson 3](../03-first-rag/README.md#no-gpu).
 
 ## Play with it
 

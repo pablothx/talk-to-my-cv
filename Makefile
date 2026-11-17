@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv run
 
-.PHONY: help install up down doctor lint test test-e2e embed similarity ingest check-00 check-01 check-02
+.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -38,6 +38,14 @@ similarity: ## Cosine similarity between A="..." and B="..."
 ingest: ## Ingest KB_DIR into pgvector (REBUILD=1 drops the index first)
 	@$(UV) python -m talk_to_my_cv.cli ingest $(if $(filter 1,$(REBUILD)),--rebuild)
 
+DEBUG_FLAG = $(if $(filter 1,$(DEBUG)),--debug)
+
+chat: ## Chat with the KB (DEBUG=1 shows retrieved chunks and scores)
+	@$(UV) python -m talk_to_my_cv.cli chat $(DEBUG_FLAG)
+
+ask: ## Ask one question Q="..." (DEBUG=1 shows retrieved chunks and scores)
+	@$(UV) python -m talk_to_my_cv.cli chat $(DEBUG_FLAG) "$(Q)"
+
 check-00: test up doctor ## Step 0: skeleton, config and doctor
 	$(UV) pre-commit run --all-files
 	@echo "✓ step 00 OK"
@@ -50,3 +58,7 @@ check-02: check-01 ## Step 2: chunking and ingestion
 	$(UV) pytest -m e2e tests/test_store_contract.py tests/test_ingest_e2e.py
 	@$(MAKE) -s ingest
 	@echo "✓ step 02 OK"
+
+check-03: check-02 ## Step 3: first RAG (uses the configured LLM_PROVIDER)
+	$(UV) pytest -m e2e tests/test_rag_e2e.py
+	@echo "✓ step 03 OK"

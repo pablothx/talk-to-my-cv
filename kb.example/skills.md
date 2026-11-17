@@ -1,6 +1,6 @@
 ---
 type: skills
-title: Skills
+title: Technical skills (tech stack)
 ---
 ## Languages
 
