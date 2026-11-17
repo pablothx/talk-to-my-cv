@@ -72,4 +72,14 @@ Tres cosas para mirar:
 2. **"Azure" puntúa más que el sinónimo.** Comparte casi todas las palabras y el tema (la nube), aunque el dato clave sea distinto. Si alguien pregunta "¿trabajó con Azure?", la búsqueda va a traer el pedazo sobre AWS. De nuevo: decide el LLM.
 3. **"Sin relación" no da 0, da 0.45.** Los scores de un modelo viven en un rango comprimido y propio. Por eso el umbral de relevancia del paso 4 se configura **por modelo** y se calibra con datos en el paso 5, no a ojo.
 
+Dos casos más, sacados de probar con un CV real:
+
+| A | B | Score | Riesgo |
+|---|---|------:|--------|
+| Salesforce | CRM | 0.58 | **Falso rechazo**: la herramienta y su categoría quedan lejos. |
+| Java | JavaScript | 0.84 | **Falso positivo**: nombres parecidos, tecnologías distintas. |
+
+4. **Salesforce vs CRM.** Si tu KB dice "Salesforce" y alguien pregunta "¿tiene experiencia con CRMs?", el pedazo puede quedar debajo del umbral y el chat va a rechazar algo que sí sabe. La solución está en cómo escribís la KB: nombrá la herramienta **y su categoría** ("Salesforce (CRM)").
+5. **Java vs JavaScript.** Para el embedding son casi lo mismo. Una pregunta sobre Java puede traer el pedazo de JavaScript con score alto. Lo retomamos en el paso 6: la búsqueda por palabras exactas (BM25) distingue "Java" de "JavaScript", y la búsqueda híbrida combina lo mejor de las dos.
+
 Probá con tus propias oraciones: dos tecnologías parecidas (Postgres vs MySQL), dos fechas distintas, tu nombre contra otro nombre.
