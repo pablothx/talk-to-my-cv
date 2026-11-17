@@ -1,0 +1,3 @@
+# Python runs on the host; Compose runs only infrastructure (steps 0–7)
+
+`make ingest`, `make chat` and the tests run on the host through `uv`. `docker compose up` starts only the stores (pgvector today, OpenSearch in step 6), plus an optional Ollama container behind `--profile ollama`. We chose this so learners get a fast edit-run loop and a working debugger, and so the `host.docker.internal` / `extra_hosts: host-gateway` plumbing stays out of the early lessons. The cost is that learners must install `uv`; `make doctor` checks for it. The app container arrives in step 8, together with the API.
