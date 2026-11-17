@@ -36,7 +36,11 @@ CONTEXT:
 
 
 def format_context(results: Sequence[SearchResult]) -> str:
-    return "\n\n".join(f"[{r.chunk.file} § {r.chunk.section}]\n{r.chunk.text}" for r in results)
+    # embed_text = heading breadcrumb + text, so the LLM sees what the embedding saw
+    # (for example, the company name that only appears in the document title).
+    return "\n\n".join(
+        f"[{r.chunk.file} § {r.chunk.section}]\n{r.chunk.embed_text}" for r in results
+    )
 
 
 LANGUAGE_NAMES = {"es": "Spanish", "en": "English"}
@@ -103,9 +107,10 @@ def answer(
     chat: ChatModel,
     threshold: float,
     k: int = 5,
+    mode: SearchMode = SearchMode.VECTOR,
 ) -> Answer:
     [query_vector] = embedder.embed([question])
-    retrieved = store.search(question, query_vector, mode=SearchMode.VECTOR, k=k)
+    retrieved = store.search(question, query_vector, mode=mode, k=k)
     context = [r for r in retrieved if r.score >= threshold]
     if not context:
         # Relevance gate (ADR-0006): nothing is related enough, so the LLM is never called.

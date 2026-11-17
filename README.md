@@ -26,7 +26,13 @@ make doctor
 | 2 | [Chunking and ingestion](lessons/02-chunking-ingestion/README.md) | `step-02` |
 | 3 | [First RAG](lessons/03-first-rag/README.md) | `step-03` |
 | 4 | [Citations and threshold](lessons/04-citations-threshold/README.md) | `step-04` |
-| 5 | Evaluation | coming soon |
+| 5 | [Evaluation](lessons/05-evaluation/README.md) | `step-05` |
+
+## How well does it work?
+
+Every change is measured against 20 questions about a fictional persona ([step 5](lessons/05-evaluation/README.md)):
+
+![Relevance threshold sweep](eval/results/threshold-sweep_bge-m3.png)
 
 ## Use it with your own CV
 

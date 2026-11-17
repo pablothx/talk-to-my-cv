@@ -67,3 +67,20 @@ def test_no_language_line_when_the_language_is_unclear():
     system = build_prompt("Kubernetes?", RESULTS)[0]["content"]
 
     assert "The question is in" not in system
+
+
+def test_context_carries_the_document_breadcrumb_so_the_llm_knows_the_company():
+    chunk = Chunk(
+        id="x",
+        content_hash="h",
+        file="experience/northwind-payments.md",
+        section="Senior Backend Engineer",
+        text="Leads a team of five engineers.",
+        embed_text="Northwind Payments > Senior Backend Engineer\n\n"
+        "Leads a team of five engineers.",
+        metadata={},
+    )
+
+    system = build_prompt("Where does she work?", [SearchResult(chunk, 0.6)])[0]["content"]
+
+    assert "Northwind Payments > Senior Backend Engineer" in system

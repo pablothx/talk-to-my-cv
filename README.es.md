@@ -26,7 +26,13 @@ make doctor
 | 2 | [Chunking e ingesta](lessons/02-chunking-ingestion/README.es.md) | `step-02` |
 | 3 | [Primer RAG](lessons/03-first-rag/README.es.md) | `step-03` |
 | 4 | [Citas y umbral](lessons/04-citations-threshold/README.es.md) | `step-04` |
-| 5 | Evaluación | próximamente |
+| 5 | [Evaluación](lessons/05-evaluation/README.es.md) | `step-05` |
+
+## ¿Qué tan bien anda?
+
+Cada cambio se mide con 20 preguntas sobre una persona ficticia ([paso 5](lessons/05-evaluation/README.es.md)):
+
+![Barrido del umbral de relevancia](eval/results/threshold-sweep_bge-m3.png)
 
 ## Usalo con tu propio CV
 

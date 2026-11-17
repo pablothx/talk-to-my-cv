@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv run
 
-.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03 check-04
+.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03 check-04 eval eval-sweep check-05
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -46,6 +46,15 @@ chat: ## Chat with the KB (DEBUG=1 shows retrieved chunks and scores)
 ask: ## Ask one question Q="..." (DEBUG=1 shows retrieved chunks and scores)
 	@$(UV) python -m talk_to_my_cv.cli chat $(DEBUG_FLAG) "$(Q)"
 
+STORE ?= pgvector
+MODE ?= vector
+
+eval: ## Run eval/questions.yaml (STORE=pgvector MODE=vector THRESHOLD=...)
+	@$(UV) python -m talk_to_my_cv.cli eval --store $(STORE) --mode $(MODE) $(if $(THRESHOLD),--threshold $(THRESHOLD))
+
+eval-sweep: ## Sweep relevance thresholds (no LLM) and plot eval/results/threshold-sweep_*.png
+	@$(UV) python -m talk_to_my_cv.cli eval-sweep --store $(STORE)
+
 check-00: test up doctor ## Step 0: skeleton, config and doctor
 	$(UV) pre-commit run --all-files
 	@echo "✓ step 00 OK"
@@ -66,3 +75,7 @@ check-03: check-02 ## Step 3: first RAG (uses the configured LLM_PROVIDER)
 check-04: check-03 ## Step 4: citations and relevance gate
 	$(UV) pytest -m e2e tests/test_citations_e2e.py
 	@echo "✓ step 04 OK"
+
+check-05: check-04 ## Step 5: evaluation
+	$(UV) pytest -m e2e tests/test_eval_e2e.py
+	@echo "✓ step 05 OK"

@@ -3,7 +3,10 @@
 embedding_models:
   bge-m3:
     dimension: 1024
-    # Minimum top-1 cosine similarity to answer at all. Provisional (step 4):
-    # answerable questions scored 0.51–0.65, an off-topic one 0.41.
-    # Step 5 calibrates it with the eval. Override with RELEVANCE_THRESHOLD.
-    relevance_threshold: 0.45
+    # Minimum top-1 cosine similarity to answer at all (ADR-0006, ADR-0009).
+    # Calibrated in step 5 on eval/questions.yaml: the gate-only sweep's best
+    # was 0.49, but the full eval with the LLM was better at 0.42
+    # (refusal accuracy 0.88 vs 0.82), because the LLM refuses well what the
+    # gate lets through. Calibrated on 20 questions: expect overfitting.
+    # Override with RELEVANCE_THRESHOLD.
+    relevance_threshold: 0.42

@@ -3,14 +3,23 @@
 import argparse
 import sys
 import time
+from pathlib import Path
 
 from talk_to_my_cv.chat_models import build_chat_model
 from talk_to_my_cv.config import load_settings
 from talk_to_my_cv.embeddings import build_embedder, cosine_similarity, relevance_threshold
+from talk_to_my_cv.evaluation import (
+    choose_threshold,
+    load_questions,
+    run_eval,
+    sweep,
+    write_report,
+)
 from talk_to_my_cv.ingest import EmbeddingModelMismatch
 from talk_to_my_cv.ingest import ingest as run_ingest
 from talk_to_my_cv.rag import Answer, answer
-from talk_to_my_cv.store import PgVectorStore
+from talk_to_my_cv.store import PgVectorStore, SearchMode
+from talk_to_my_cv.sweep_plot import plot_sweep
 
 
 def embed(text: str) -> None:
@@ -86,6 +95,87 @@ def ask(questions: list[str], debug: bool) -> int:
     return 0
 
 
+ROOT = Path(__file__).resolve().parents[2]
+EVAL_KB = ROOT / "kb.example"
+QUESTIONS = ROOT / "eval" / "questions.yaml"
+RESULTS = ROOT / "eval" / "results"
+STORES = {"pgvector": lambda settings: PgVectorStore(settings.database_url, schema="eval")}
+
+
+def _eval_setup(store_name: str):
+    """The eval always runs against kb.example/, in its own schema, whatever KB_DIR says."""
+    settings = load_settings()
+    if store_name not in STORES:
+        raise SystemExit(f"unknown STORE {store_name!r}; available: {', '.join(STORES)}")
+    store = STORES[store_name](settings)
+    embedder = build_embedder(settings)
+    run_ingest(EVAL_KB, embedder, store)
+    return settings, store, embedder
+
+
+def evaluate(store_name: str, mode: str, threshold: float | None) -> int:
+    settings, store, embedder = _eval_setup(store_name)
+    chat = build_chat_model(settings)
+    threshold = threshold if threshold is not None else relevance_threshold(settings.embed_model)
+    questions = load_questions(QUESTIONS, EVAL_KB)
+    search_mode = SearchMode(mode)
+
+    def ask_one(question: str) -> Answer:
+        print(f"  · {question}", flush=True)
+        return answer(question, embedder, store, chat, threshold=threshold, mode=search_mode)
+
+    report = run_eval(
+        questions,
+        ask_one,
+        store=store_name,
+        mode=search_mode,
+        embed_model=settings.embed_model,
+        chat_model=settings.chat_model,
+        threshold=threshold,
+        k=5,
+    )
+    md, js = write_report(report, RESULTS)
+    print(f"\n{md.read_text()}\nwritten: {md.relative_to(ROOT)}, {js.relative_to(ROOT)}")
+    return 0
+
+
+def evaluate_sweep(store_name: str) -> int:
+    settings, store, embedder = _eval_setup(store_name)
+    questions = load_questions(QUESTIONS, EVAL_KB)
+    vectors = embedder.embed([q.question for q in questions])
+    top_scores = []
+    for question, vector in zip(questions, vectors, strict=True):
+        [top] = store.search(question.question, vector, mode=SearchMode.VECTOR, k=1)
+        top_scores.append((question, top.score))
+    rows = sweep(top_scores, thresholds=[round(0.35 + i / 100, 2) for i in range(31)])
+    chosen = choose_threshold(rows)
+
+    print(f"{'id':22} {'type':13} top-1")
+    for question, score in sorted(top_scores, key=lambda x: x[1], reverse=True):
+        trap = "  (trap)" if question.trap else ""
+        print(f"{question.id:22} {question.type:13} {score:.3f}{trap}")
+    print("\nthreshold  refused  passing  gate accuracy")
+    for r in rows:
+        mark = "  ← gate-only best" if r.threshold == chosen else ""
+        print(
+            f"  {r.threshold:.2f}     {r.correct_refusals:5.0%}   {r.answerable_passing:5.0%}"
+            f"   {r.gate_accuracy:5.0%}{mark}"
+        )
+    configured = relevance_threshold(settings.embed_model)
+    png = plot_sweep(
+        rows,
+        chosen,
+        configured,
+        settings.embed_model,
+        RESULTS / f"threshold-sweep_{settings.embed_model}.png",
+    )
+    print(f"\ngate-only best: {chosen:.2f}  ·  configured: {configured:.2f}")
+    print("The gate ignores that the LLM can still refuse: confirm candidates with")
+    print("`make eval THRESHOLD=...` and set the winner in config/models.yaml (ADR-0009).")
+    print(f"written: {png.relative_to(ROOT)}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="talk-to-my-cv")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -97,6 +187,11 @@ def main() -> int:
     chat = commands.add_parser("chat")
     chat.add_argument("question", nargs="*", help="ask once and exit; omit for a REPL")
     chat.add_argument("--debug", action="store_true", help="show retrieved chunks and scores")
+    run = commands.add_parser("eval")
+    run.add_argument("--store", default="pgvector")
+    run.add_argument("--mode", default="vector", choices=[m.value for m in SearchMode])
+    run.add_argument("--threshold", type=float, default=None)
+    commands.add_parser("eval-sweep").add_argument("--store", default="pgvector")
     args = parser.parse_args()
     if args.command == "embed":
         embed(args.text)
@@ -104,6 +199,10 @@ def main() -> int:
         similarity(args.a, args.b)
     elif args.command == "ingest":
         return ingest(args.rebuild)
+    elif args.command == "eval":
+        return evaluate(args.store, args.mode, args.threshold)
+    elif args.command == "eval-sweep":
+        return evaluate_sweep(args.store)
     else:
         return ask([" ".join(args.question)] if args.question else [], args.debug)
     return 0
