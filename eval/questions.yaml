@@ -11,6 +11,11 @@
 #   negation      the KB answers it with a "no"; the chat must answer "no",
 #                 citing the source (neither refuse nor affirm)
 #
+# Optional checks, measured by the step 5 runner:
+#   check_language     the reply must be in `lang` (the question's language)
+#   forbid_unsupported_no  a bare "no" is a hallucination here: the KB is
+#                          silent, so only the refusal is correct
+#
 # expected_sources: file + section path, exactly as the chunker produces them.
 
 questions:
@@ -72,11 +77,17 @@ questions:
   # top 3; the top-1 is profile.md § Summary at 0.499. Inside a full chunk,
   # "Java" is diluted, so the false positive shows up as a high top-1 score
   # (above unrelated questions at ~0.41) rather than as the Java chunk itself.
+  #
+  # "I don't know" vs "no" (found in step 3): with qwen2.5:3b the reply was a
+  # bare "No". The KB never mentions JavaScript, so "no" is a hallucination:
+  # the model infers a fact that isn't there. Only the refusal is correct.
+  # Contrast with trap-kubernetes, where the KB explicitly says "never".
   - id: trap-javascript
     type: unanswerable
     lang: en
     question: Has she worked with JavaScript?
     trap: embedding-false-positive
+    forbid_unsupported_no: true
 
   # TRAP 2: false refusal (tool named without its category).
   # HubSpot appears only in experience/northwind-payments.md > Integrations,
@@ -105,9 +116,14 @@ questions:
   # have that information") and a "yes" are failures.
   # Measured in step 2: Infrastructure is the top-1, but only at 0.514, barely
   # above trap-javascript's 0.499. No single threshold separates them well.
+  #
+  # Language rule (found in step 3): with qwen2.5:3b the content was right
+  # ("No, she has never used Kubernetes in production.") but in English,
+  # although the question is in Spanish. check_language makes step 5 count it.
   - id: trap-kubernetes
     type: negation
     lang: es
+    check_language: true
     question: ¿Usó Kubernetes?
     expected_sources:
       - file: experience/northwind-payments.md
