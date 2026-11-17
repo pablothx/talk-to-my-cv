@@ -116,7 +116,9 @@ Medido en un Ryzen 7 4700U (8 núcleos, sin GPU, 22 GB de RAM) con `qwen2.5:3b`:
 | Una respuesta típica con 5 chunks | 11 a 25 s |
 | Las 4 preguntas de `check-03` | ~35 s |
 
-Se puede usar, pero no es una conversación fluida. Por eso, en una máquina así, conviene `LLM_PROVIDER=groq`. Los embeddings (`bge-m3`) siguen siendo locales y rápidos: el cuello de botella es generar texto.
+Se puede usar, pero no es una conversación fluida. Los embeddings (`bge-m3`) siguen siendo locales y rápidos: el cuello de botella es generar texto. Este tutorial se escribió entero así, 100% local.
+
+> Si tenés una key de Groq, cambiá una línea (`LLM_PROVIDER=groq`) y comparás: tiempo por respuesta y si cumple la regla del idioma en "¿Usó Kubernetes?".
 
 ## Para jugar
 
