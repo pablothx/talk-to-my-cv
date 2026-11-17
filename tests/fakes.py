@@ -1,0 +1,21 @@
+"""Test doubles shared across unit tests."""
+
+import hashlib
+from collections.abc import Sequence
+
+
+class FakeEmbedder:
+    """Deterministic vectors derived from a hash of the text; records every embedded text."""
+
+    def __init__(self, model: str = "fake-embed", dimension: int = 8):
+        self.model = model
+        self.dimension = dimension
+        self.embedded: list[str] = []
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        self.embedded.extend(texts)
+        return [self._vector(t) for t in texts]
+
+    def _vector(self, text: str) -> list[float]:
+        digest = hashlib.sha256(text.encode()).digest()
+        return [b / 255 + 0.01 for b in digest[: self.dimension]]

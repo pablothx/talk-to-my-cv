@@ -6,7 +6,9 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "numpy>=2.5.5",
     "ollama>=0.6.3",
+    "pgvector>=0.5.1",
     "psycopg[binary]>=3.3.9",
     "pydantic>=2.14.3",
     "python-dotenv>=1.2.4",
@@ -29,6 +31,7 @@ packages = ["src/talk_to_my_cv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 markers = ["e2e: needs Ollama, pgvector and the configured LLM provider"]
 addopts = "-m 'not e2e'"
 

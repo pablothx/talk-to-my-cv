@@ -1,0 +1,116 @@
+# Evaluation questions for kb.example/ (the fictional persona Valentina Ríos).
+#
+# Seeded in step 2 with the planted facts and the deliberate traps; step 5
+# completes it to ~20 questions and adds the runner.
+#
+# type:
+#   answerable    the KB answers it; must cite expected_sources
+#   planted       answerable, but the fact is unguessable: proves the answer
+#                 comes from the documents and not from the model's memory
+#   unanswerable  the KB does not answer it; the chat must refuse
+#   negation      the KB answers it with a "no"; the chat must answer "no",
+#                 citing the source (neither refuse nor affirm)
+#
+# expected_sources: file + section path, exactly as the chunker produces them.
+
+questions:
+  # --- Planted facts -------------------------------------------------------
+  - id: planted-lumen
+    type: planted
+    lang: en
+    question: How much did Project Lumen speed up reconciliation?
+    expected_sources:
+      - file: experience/northwind-payments.md
+        section: Senior Backend Engineer > Project Lumen
+    expected_answer: From 9 hours to 14 minutes.
+
+  - id: planted-certification-date
+    type: planted
+    lang: es
+    question: ¿Cuándo obtuvo la certificación de AWS?
+    expected_sources:
+      - file: education.md
+        section: Certifications
+    expected_answer: El 29 de febrero de 2024 (AWS Certified Solutions Architect – Professional).
+
+  - id: planted-hackathon
+    type: planted
+    lang: en
+    question: What award did she win at BrightCart?
+    expected_sources:
+      - file: experience/brightcart.md
+        section: Backend Developer > Hackathon
+    expected_answer: The internal "Golden Pigeon" hackathon award in 2019, with Breadcrumb.
+
+  - id: planted-esperanto
+    type: planted
+    lang: es
+    question: ¿Qué idiomas habla?
+    expected_sources:
+      - file: profile.md
+        section: Languages
+    expected_answer: Español (nativo), inglés (C1) y esperanto (B2).
+
+  - id: planted-tinyledger
+    type: planted
+    lang: en
+    question: How many GitHub stars does tinyledger have?
+    expected_sources:
+      - file: projects.md
+        section: tinyledger
+    expected_answer: 1,312 stars.
+
+  # --- Traps ---------------------------------------------------------------
+
+  # TRAP 1: embedding false positive (Java vs JavaScript, ~0.84 with bge-m3).
+  # The KB mentions Java many times and JavaScript never. Vector search will
+  # bring back the Java chunks with a high score, possibly above the relevance
+  # threshold, so the LLM sees "Java" in context and may wrongly say yes.
+  # Expected: refuse. We expect vector search to struggle here and BM25 /
+  # hybrid search (step 6) to fix it, because "JavaScript" matches no token.
+  # Measured in step 2 (bge-m3, whole chunks): the Java chunk is NOT in the
+  # top 3; the top-1 is profile.md § Summary at 0.499. Inside a full chunk,
+  # "Java" is diluted, so the false positive shows up as a high top-1 score
+  # (above unrelated questions at ~0.41) rather than as the Java chunk itself.
+  - id: trap-javascript
+    type: unanswerable
+    lang: en
+    question: Has she worked with JavaScript?
+    trap: embedding-false-positive
+
+  # TRAP 2: false refusal (tool named without its category).
+  # HubSpot appears only in experience/northwind-payments.md > Integrations,
+  # and the word "CRM" appears nowhere near it (on purpose, unlike skills.md,
+  # which always writes "Tool (category)"). "CRM" vs the HubSpot chunk may score
+  # below the threshold, so the chat may refuse something the KB does answer.
+  # Expected: answer yes (HubSpot), citing Integrations. A refusal here is the
+  # known failure this trap demonstrates; the fix is writing "HubSpot (CRM)".
+  # Measured in step 2: the Integrations chunk is not even in the top 3
+  # (top-1 is skills.md § Data and messaging at 0.524). The trap reproduces.
+  - id: trap-crm
+    type: answerable
+    lang: es
+    question: ¿Tiene experiencia en CRM?
+    expected_sources:
+      - file: experience/northwind-payments.md
+        section: Senior Backend Engineer > Integrations
+    expected_answer: Sí, integró el servicio de facturación con HubSpot.
+    trap: false-refusal
+
+  # TRAP 3: explicit negation.
+  # The KB says "She has never used Kubernetes in production". Embeddings
+  # capture the topic, not the claim (negation scores ~0.75), so retrieval
+  # finds the chunk easily; the risk is in generation. Expected: answer NO,
+  # citing Infrastructure (she chose ECS over EKS). Both a refusal ("I don't
+  # have that information") and a "yes" are failures.
+  # Measured in step 2: Infrastructure is the top-1, but only at 0.514, barely
+  # above trap-javascript's 0.499. No single threshold separates them well.
+  - id: trap-kubernetes
+    type: negation
+    lang: es
+    question: ¿Usó Kubernetes?
+    expected_sources:
+      - file: experience/northwind-payments.md
+        section: Senior Backend Engineer > Infrastructure
+    expected_answer: No en producción; el equipo evaluó EKS en 2022 y eligió ECS Fargate.
+    trap: negation

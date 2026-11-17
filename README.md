@@ -23,14 +23,14 @@ make doctor
 |------|--------|-----|
 | 0 | [Setup](lessons/00-setup/README.md) | `step-00` |
 | 1 | [Embeddings](lessons/01-embeddings/README.md) | `step-01` |
-| 2 | Chunking and ingestion | coming soon |
+| 2 | [Chunking and ingestion](lessons/02-chunking-ingestion/README.md) | `step-02` |
 | 3 | First RAG | coming soon |
 | 4 | Citations and threshold | coming soon |
 | 5 | Evaluation | coming soon |
 
 ## Use it with your own CV
 
-Coming with step 2: put your Markdown in `kb/` and set `KB_DIR=kb`.
+Put your Markdown in `kb/` (same shape as `kb.example/`), set `KB_DIR=kb` in `.env`, and run `make ingest`. Files under `kb/_drafts/` are ignored.
 
 ## License
 
