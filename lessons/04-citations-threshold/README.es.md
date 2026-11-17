@@ -122,7 +122,11 @@ Un modelo chico tiende a contestar en el idioma del contexto, y nuestro contexto
      ...
    ```
 
-   Es peor que en el paso 3: la alucinación ("No", cuando la KB no dice nada sobre JavaScript) ahora **viene con 4 fuentes** y parece respaldada. Las citas dicen qué leyó el LLM, no que lo que dice sea verdad. Como vimos en el paso 2, el top-1 (0.499) está casi pegado al de Kubernetes (0.514), así que el umbral no puede separarlas. El paso 5 lo va a medir.
+   Es peor que en el paso 3: la alucinación ("No", cuando la KB no dice nada sobre JavaScript) ahora **viene con 4 fuentes** y parece respaldada. Como vimos en el paso 2, el top-1 (0.499) está casi pegado al de Kubernetes (0.514), así que el umbral no puede separarlas.
+
+   > **Una cita no es una garantía.** Citamos los chunks que pasaron el umbral, es decir, lo que el LLM **leyó**. Eso no prueba lo que el LLM **afirma**: ninguno de esos 4 chunks dice que no haya usado JavaScript. Una cita te dice dónde mirar, no que la respuesta sea verdad.
+
+   El paso 5 lo va a medir. En `eval/questions.yaml`, la pregunta `trap-javascript` tiene `forbid_unsupported_no: true`: el único resultado correcto es el rechazo, y un "No" cuenta como alucinación, venga con citas o sin ellas.
 
 2. **Mové el umbral.** Probá la pregunta de JavaScript con `RELEVANCE_THRESHOLD=0.5` (rechaza sin llamar al LLM) y después "¿Usó Kubernetes?" con `RELEVANCE_THRESHOLD=0.52` (también rechaza, y esa sí tenía respuesta). Ese es el dilema que el paso 5 resuelve con datos.
 
