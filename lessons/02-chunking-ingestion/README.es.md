@@ -96,5 +96,15 @@ kb.example: 0 added, 0 updated, 19 unchanged, 0 deleted
 
    - **Los scores son más bajos que en el paso 1.** Un chunk entero tiene más palabras que una oración suelta, y eso diluye la similitud.
    - **La trampa de CRM se reproduce:** el chunk de HubSpot ni siquiera entra en el top 3. Cambiá "HubSpot" por "HubSpot (CRM)" en `kb.example/experience/northwind-payments.md`, re-ingestá y volvé a mirar.
-   - **La trampa de JavaScript no salió como esperábamos.** El chunk de Java no aparece arriba: dentro de un chunk largo, "Java" pesa poco. Pero el score (0.50) queda **casi igual** al de la pregunta de Kubernetes (0.51), que sí tiene respuesta. Ningún umbral los separa bien. Lo vamos a ver en los pasos 4 y 5.
+   - **La trampa de JavaScript no salió como esperábamos, y eso enseña más.** El chunk de Java no aparece arriba, porque dentro de un chunk largo "Java" pesa poco. El problema es otro: el top-1 de JavaScript da **0.50** y el de Kubernetes da **0.51**. Kubernetes tiene respuesta ("no en producción") y JavaScript no tiene. **Un umbral sobre el score del top-1 no puede separarlas:** si lo ponés en 0.505, rechaza una pregunta que tenía respuesta; si lo bajás, deja pasar una que no la tiene.
+
+     El paso 5 lo va a medir con todas las preguntas de la eval. Si se confirma, revisamos el [ADR-0006](../../docs/adr/0006-relevance-gate-before-llm.md) y, en el paso 7, agregamos un paso de verificación con el LLM: que lea los chunks recuperados y decida si de verdad responden la pregunta.
 3. **Cambiá `EMBED_MODEL`** a otro modelo (por ejemplo `nomic-embed-text`, después de `ollama pull` y de agregarlo a `config/models.yaml`) y corré `make ingest`. Leé el error.
+
+## Limitaciones conocidas
+
+Las dejamos así a propósito, porque para este tutorial no cambian el resultado:
+
+- **Un solo párrafo de más de 1500 caracteres queda como un chunk grande.** Cortamos por párrafos, nunca a mitad de uno. Si tu KB tiene párrafos enormes, partilos vos.
+- **El chunker no distingue un título real de un `#` dentro de un bloque de código.** Un comentario de shell (`# install`) dentro de ```` ``` ```` se tomaría como título. En un CV es raro.
+- **No hay índice HNSW en pgvector.** Con 19 chunks, la búsqueda exacta compara contra todos y tarda milisegundos. Con miles de chunks hace falta un índice aproximado; lo vemos en el paso 6.
