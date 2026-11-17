@@ -25,7 +25,7 @@ OpenSearch and hybrid search (step 6), LangGraph (step 7), FastAPI and the web U
 
 These are stated once here and in `CLAUDE.md`; the steps below assume them.
 
-- **Config:** settings come from env and `.env`, through `pydantic-settings` in `talk_to_my_cv/config.py`. Per-model data (embedding dimension, relevance threshold) lives in `config/models.yaml`.
+- **Config:** settings come from env and `.env`, through `pydantic` + `python-dotenv` in `talk_to_my_cv/config.py` (`load_settings(env)` takes an injectable env for tests). Per-model data (embedding dimension, relevance threshold) lives in `config/models.yaml`.
 - **Tests:** `make test` runs ruff and the unit tests. `make test-e2e` runs the tests marked `e2e`, which need Ollama, pgvector and the configured `LLM_PROVIDER`.
 - **`make check-NN`** = `make test`, then the e2e tests for steps ≤ NN, then any step-specific smoke command. It exits non-zero on any failure.
 - **Lessons:** each lesson ships `lessons/NN-name/README.es.md` (drafted first, then approved by the user) and `README.md` (generated after approval), cross-linked.

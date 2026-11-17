@@ -1,0 +1,31 @@
+# Infrastructure only: Python runs on the host with uv (ADR-0001).
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: talk_to_my_cv
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d talk_to_my_cv"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Optional: only if you don't run Ollama natively (`docker compose --profile ollama up -d`).
+  # It publishes the same port as native Ollama, so run one or the other.
+  ollama:
+    image: ollama/ollama:0.40.0
+    profiles: [ollama]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+volumes:
+  pgdata:
+  ollama:
