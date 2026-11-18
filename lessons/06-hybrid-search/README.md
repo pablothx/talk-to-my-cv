@@ -113,4 +113,4 @@ Four things to look at:
 
 - **The analyzer mixes two languages** with an English stemmer. For a Spanish-only KB, OpenSearch's `spanish` analyzer is a better fit.
 - **Some question words are in the stopword list**, like "worked" and "used": they add nothing when asking, but the rule is a heuristic, not a law.
-- **OpenSearch runs without security.** Fine on your machine; for AWS, see [docs/produccion-en-aws.md](../../docs/produccion-en-aws.md).
+- **OpenSearch runs without security.** Fine on your machine; for AWS, see [docs/production-on-aws.md](../../docs/production-on-aws.md).

@@ -94,4 +94,4 @@ Abrí http://localhost:8000 y preguntá. Después probá escribir `<script>alert
 
 - **Sin streaming:** la página espera la respuesta entera (10 a 30 segundos en CPU), sin indicador de progreso, porque no tiene JavaScript.
 - **Sin autenticación ni límite de pedidos.** Está bien en tu máquina; publicarla así deja que cualquiera use tu CPU (o tu cuenta de Groq). En AWS, ver [docs/produccion-en-aws.md](../../docs/produccion-en-aws.md).
-- **Una pregunta a la vez por proceso:** FastAPI atiende varias, pero Ollama en CPU genera una respuesta por vez, así que las demás esperan.
+- **Una respuesta a la vez:** FastAPI atiende varias preguntas juntas, pero Ollama en CPU genera una respuesta por vez, así que las demás esperan.
