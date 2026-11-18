@@ -29,7 +29,7 @@ LangGraph lo escribe como un grafo: cada **nodo** es una función que lee el **e
 
 El [ADR-0009](../../docs/adr/0009-top1-gate-does-not-separate-alone.md) pedía, después de la búsqueda, una verificación con el LLM. La idea obvia es preguntarle: "¿este CONTEXTO responde la PREGUNTA? Contestá SÍ o NO".
 
-La probamos con `qwen2.5:3b` en 7 preguntas con respuesta conocida, con tres prompts distintos:
+La probamos con `qwen2.5:3b` en 6 preguntas con respuesta conocida, con tres prompts distintos:
 
 | Pregunta | Esperado | Prompt A | Prompt B | Prompt C |
 |---|:-:|:-:|:-:|:-:|
