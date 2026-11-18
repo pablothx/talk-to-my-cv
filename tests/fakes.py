@@ -31,3 +31,15 @@ class FakeChatModel:
     def complete(self, messages: list[dict[str, str]]) -> str:
         self.calls.append(messages)
         return self.reply
+
+
+class ScriptedChatModel:
+    """Replies in order, one per call; records every conversation it was given."""
+
+    def __init__(self, *replies: str):
+        self.replies = list(replies)
+        self.calls: list[list[dict[str, str]]] = []
+
+    def complete(self, messages: list[dict[str, str]]) -> str:
+        self.calls.append(messages)
+        return self.replies[len(self.calls) - 1]

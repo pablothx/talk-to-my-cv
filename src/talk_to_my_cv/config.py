@@ -21,6 +21,7 @@ class Settings(BaseModel):
     opensearch_url: str = "http://localhost:9200"
     vector_store: Literal["pgvector", "opensearch"] = "pgvector"
     search_mode: Literal["vector", "keyword", "hybrid"] = "vector"
+    engine: Literal["pipeline", "graph"] = "pipeline"
 
     @property
     def chat_model(self) -> str:

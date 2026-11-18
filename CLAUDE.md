@@ -14,6 +14,7 @@ Before changing architecture, read `docs/adr/`. Terms (chunk, section path, rele
 - One package, `src/talk_to_my_cv/`, grows step by step. `lessons/NN-name/` holds only READMEs (ADR-0002).
 - Every model call goes through our own `Embedder` / `ChatModel` interfaces. LangChain and LangGraph enter only at step 7 (ADR-0003).
 - Defaults always satisfy the no-keys requirement: `LLM_PROVIDER=ollama` in code and `.env.example`. Groq is opt-in (ADR-0004).
+- `ENGINE=pipeline` (steps 3–6, `rag.answer`) or `ENGINE=graph` (step 7, `graph.answer_with_graph`): same arguments, same `Answer`. The pipeline stays as the lessons wrote it.
 - The vector stores implement `VectorStore` (`upsert`, `search(query, mode, k)`). An unsupported mode raises `UnsupportedSearchMode` (ADR-0007).
 - The KB is Markdown with frontmatter under `KB_DIR`: `kb.example/` is a fictional persona written in English, and `kb/` holds the user's real data (never commit `kb/_drafts/`).
 - Chunks are split by H2 (H3 when present). Sections over ~1500 chars are split by paragraph. The embedded text is prefixed with the heading breadcrumb; the stored section stays bare for citations.
@@ -37,4 +38,4 @@ A step closes only in this order:
 ## Eval
 
 - `eval/questions.yaml` holds three kinds of questions: answerable, unanswerable (the bot must refuse) and planted facts.
-- Each run writes `eval/results/<YYYY-MM-DD>_<store>_<mode>_<embed-model>.md` plus a `.json` with the same metrics, and both are committed. Raw runs go to `eval/results/raw/`, which is gitignored.
+- Each run writes `eval/results/<YYYY-MM-DD>_<store>_<mode>_<embed-model>.md` (with `_graph` before the model for `ENGINE=graph`) plus a `.json` with the same metrics, and both are committed. Raw runs go to `eval/results/raw/`, which is gitignored.

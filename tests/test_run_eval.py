@@ -129,3 +129,13 @@ def test_sweep_measures_the_gate_alone_and_the_lowest_best_threshold_wins():
     assert by_t[0.45].correct_refusals == 1.0 and by_t[0.45].answerable_passing == 1.0
     assert by_t[0.65].answerable_passing == 0.0
     assert choose_threshold(rows) == pytest.approx(0.45)
+
+
+def test_a_graph_run_is_named_apart_so_it_does_not_overwrite_the_pipeline_run(tmp_path):
+    report = _run()
+    report.engine = "graph"
+
+    md, _ = write_report(report, tmp_path)
+
+    assert md.name.endswith("_memory_vector_graph_fake.md")
+    assert "engine: `graph`" in md.read_text()

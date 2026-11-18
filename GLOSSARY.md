@@ -24,6 +24,10 @@ _Avoid_: breadcrumb, anchor
 The check that decides whether any retrieved chunk is related enough for the chat to answer at all.
 _Avoid_: filter, guardrail
 
+**Named term**:
+A specific name a question asks about (a technology, company, project, certification). If the retrieved chunks never mention it, the chat refuses.
+_Avoid_: keyword, entity
+
 **Refusal**:
 The fixed reply given when the relevance gate fails or the question is off-topic.
 _Avoid_: fallback, error, "I don't know"

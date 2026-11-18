@@ -63,3 +63,10 @@ def test_store_and_search_mode_are_validated():
 def test_a_mode_the_store_cannot_do_fails_at_startup():
     with pytest.raises(ValueError, match="pgvector.*hybrid.*opensearch"):
         load_settings(env={"VECTOR_STORE": "pgvector", "SEARCH_MODE": "hybrid"})
+
+
+def test_the_engine_defaults_to_the_step_3_pipeline_and_is_validated():
+    assert load_settings(env={}).engine == "pipeline"
+    assert load_settings(env={"ENGINE": "graph"}).engine == "graph"
+    with pytest.raises(ValueError, match="pipeline.*graph"):
+        load_settings(env={"ENGINE": "agent"})

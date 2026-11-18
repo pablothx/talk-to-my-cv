@@ -165,6 +165,7 @@ class EvalReport:
     results: list[QuestionResult] = field(default_factory=list)
     skipped: str | None = None
     day: date = field(default_factory=date.today)
+    engine: str = "pipeline"
 
     def scored(self) -> list[QuestionResult]:
         """The questions that count for the targets: everything except deliberate traps."""
@@ -195,7 +196,9 @@ class EvalReport:
 
     @property
     def name(self) -> str:
-        return f"{self.day.isoformat()}_{self.store}_{self.mode}_{self.embed_model}"
+        # The step 3 pipeline keeps the step 5 name; other engines get their own file.
+        engine = "" if self.engine == "pipeline" else f"_{self.engine}"
+        return f"{self.day.isoformat()}_{self.store}_{self.mode}{engine}_{self.embed_model}"
 
 
 def run_eval(
@@ -208,8 +211,9 @@ def run_eval(
     chat_model: str,
     threshold: float,
     k: int,
+    engine: str = "pipeline",
 ) -> EvalReport:
-    report = EvalReport(store, mode, embed_model, chat_model, threshold, k)
+    report = EvalReport(store, mode, embed_model, chat_model, threshold, k, engine=engine)
     for question in questions:
         try:
             answer = ask(question.question)
@@ -238,7 +242,7 @@ def render_markdown(report: EvalReport) -> str:
         f"# Eval {report.name}\n\n"
         f"- store: `{report.store}`, mode: `{report.mode}`, k: {report.k}\n"
         f"- embeddings: `{report.embed_model}`, threshold: {report.threshold:.2f}\n"
-        f"- LLM: `{report.chat_model}`\n\n"
+        f"- LLM: `{report.chat_model}`, engine: `{report.engine}`\n\n"
     )
     if report.skipped:
         return head + f"**Skipped:** {report.skipped}\n"

@@ -15,11 +15,15 @@ from talk_to_my_cv.evaluation import (
     sweep,
     write_report,
 )
+from talk_to_my_cv.graph import answer_with_graph
 from talk_to_my_cv.ingest import EmbeddingModelMismatch
 from talk_to_my_cv.ingest import ingest as run_ingest
 from talk_to_my_cv.rag import Answer, answer
 from talk_to_my_cv.store import SearchMode, build_store
 from talk_to_my_cv.sweep_plot import plot_sweep
+
+# Both take the same arguments and return an Answer: ENGINE picks one (step 7).
+ENGINES = {"pipeline": answer, "graph": answer_with_graph}
 
 
 def embed(text: str) -> None:
@@ -57,6 +61,10 @@ def _print_answer(result: Answer, threshold: float, debug: bool, seconds: float)
         for r in result.retrieved:
             mark = "✓" if r in result.context else " "
             print(f"  {mark} {r.score:.3f}  {r.chunk.file} § {r.chunk.section}")
+        if result.query:
+            print(f"── keyword query (reformulated): {result.query}")
+        if result.verified is not None:
+            print(f"── named terms in the context: {'yes' if result.verified else 'NO → refuse'}")
         llm = "LLM called" if result.context else "LLM not called"
         print(f"── answer ({seconds:.1f}s, {llm}) ──")
     print(result.text)
@@ -73,11 +81,12 @@ def ask(questions: list[str], debug: bool) -> int:
     store = build_store(settings.vector_store, settings)
     mode = SearchMode(settings.search_mode)
     threshold = relevance_threshold(settings.embed_model)
+    respond = ENGINES[settings.engine]
     interactive = not questions
     if interactive:
         print(
             f"Chatting about {settings.kb_dir} with {settings.llm_provider}:"
-            f"{settings.chat_model}. Empty line or Ctrl-D to quit."
+            f"{settings.chat_model} ({settings.engine}). Empty line or Ctrl-D to quit."
         )
     while True:
         if interactive:
@@ -92,7 +101,7 @@ def ask(questions: list[str], debug: bool) -> int:
         else:
             break
         start = time.perf_counter()
-        result = answer(question, embedder, store, chat, threshold=threshold, mode=mode)
+        result = respond(question, embedder, store, chat, threshold=threshold, mode=mode)
         _print_answer(result, threshold, debug, time.perf_counter() - start)
     return 0
 
@@ -115,8 +124,10 @@ def _eval_setup(store_name: str):
     return settings, store, embedder
 
 
-def evaluate(store_name: str, mode: str, threshold: float | None) -> int:
+def evaluate(store_name: str, mode: str, threshold: float | None, engine: str | None = None) -> int:
     settings, store, embedder = _eval_setup(store_name)
+    engine = engine or settings.engine
+    respond = ENGINES[engine]
     chat = build_chat_model(settings)
     threshold = threshold if threshold is not None else relevance_threshold(settings.embed_model)
     questions = load_questions(QUESTIONS, EVAL_KB)
@@ -124,7 +135,7 @@ def evaluate(store_name: str, mode: str, threshold: float | None) -> int:
 
     def ask_one(question: str) -> Answer:
         print(f"  · {question}", flush=True)
-        return answer(question, embedder, store, chat, threshold=threshold, mode=search_mode)
+        return respond(question, embedder, store, chat, threshold=threshold, mode=search_mode)
 
     report = run_eval(
         questions,
@@ -135,6 +146,7 @@ def evaluate(store_name: str, mode: str, threshold: float | None) -> int:
         chat_model=settings.chat_model,
         threshold=threshold,
         k=5,
+        engine=engine,
     )
     md, js = write_report(report, RESULTS)
     print(f"\n{md.read_text()}\nwritten: {md.relative_to(ROOT)}, {js.relative_to(ROOT)}")
@@ -193,6 +205,7 @@ def main() -> int:
     run.add_argument("--store", default="pgvector")
     run.add_argument("--mode", default="vector", choices=[m.value for m in SearchMode])
     run.add_argument("--threshold", type=float, default=None)
+    run.add_argument("--engine", default=None, choices=list(ENGINES))
     commands.add_parser("eval-sweep").add_argument("--store", default="pgvector")
     args = parser.parse_args()
     if args.command == "embed":
@@ -202,7 +215,7 @@ def main() -> int:
     elif args.command == "ingest":
         return ingest(args.rebuild)
     elif args.command == "eval":
-        return evaluate(args.store, args.mode, args.threshold)
+        return evaluate(args.store, args.mode, args.threshold, args.engine)
     elif args.command == "eval-sweep":
         return evaluate_sweep(args.store)
     else:

@@ -92,6 +92,8 @@ class Answer:
     citations: list[str]
     retrieved: list[SearchResult]  # everything search returned, for DEBUG
     context: list[SearchResult]  # what passed the relevance gate and reached the LLM
+    verified: bool | None = None  # step 7: the verifier's verdict (None: not asked or unclear)
+    query: str | None = None  # step 7: the reformulated keyword query, when there was one
 
 
 def cite(results: Sequence[SearchResult]) -> list[str]:

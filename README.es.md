@@ -28,7 +28,7 @@ make doctor
 | 4 | [Citas y umbral](lessons/04-citations-threshold/README.es.md) | `step-04` |
 | 5 | [Evaluación](lessons/05-evaluation/README.es.md) | `step-05` |
 | 6 | [Búsqueda híbrida con OpenSearch](lessons/06-hybrid-search/README.es.md) | `step-06` |
-| 7 | LangGraph | próximamente |
+| 7 | [LangGraph y verificación](lessons/07-langgraph/README.es.md) | `step-07` |
 | 8 | API y web | próximamente |
 | Bonus | Producción en AWS | próximamente |
 

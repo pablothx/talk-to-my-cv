@@ -28,7 +28,7 @@ make doctor
 | 4 | [Citations and threshold](lessons/04-citations-threshold/README.md) | `step-04` |
 | 5 | [Evaluation](lessons/05-evaluation/README.md) | `step-05` |
 | 6 | [Hybrid search with OpenSearch](lessons/06-hybrid-search/README.md) | `step-06` |
-| 7 | LangGraph | coming soon |
+| 7 | [LangGraph and verification](lessons/07-langgraph/README.md) | `step-07` |
 | 8 | API and web | coming soon |
 | Bonus | Production on AWS | coming soon |
 

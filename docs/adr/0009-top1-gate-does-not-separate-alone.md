@@ -7,4 +7,4 @@ We keep the gate, because it is deterministic, free and impossible to talk aroun
 ## Consequences
 
 - The threshold is calibrated on the same 20 questions the eval reports: the numbers are optimistic (overfitting). New questions are needed to trust them.
-- Step 7 adds an LLM verification step after retrieval: it decides whether the retrieved chunks actually answer the question, instead of relying on the score alone.
+- Step 7 adds an LLM verification step after retrieval: it decides whether the retrieved chunks actually answer the question, instead of relying on the score alone. ADR-0011 records how: the LLM extracts names and code checks them, because a 3B model judging YES/NO failed.
