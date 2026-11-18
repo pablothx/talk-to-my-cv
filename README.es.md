@@ -40,7 +40,9 @@ Cada cambio se mide con 20 preguntas sobre una persona ficticia ([paso 5](lesson
 
 ## Usalo con tu propio CV
 
-Poné tu Markdown en `kb/` (con la misma forma que `kb.example/`), configurá `KB_DIR=kb` en `.env` y corré `make ingest`. Lo que esté en `kb/_drafts/` se ignora.
+Lo más rápido: poné tu CV en PDF en `kb/`, configurá `KB_DIR=kb` en `.env` y corré `make ingest`. Las líneas en MAYÚSCULAS (`PROFESSIONAL EXPERIENCE`) pasan a ser secciones, y las que terminan en un rango de años (`Senior Engineer, Acme (2021 – Present)`) arman un pedazo por cada trabajo. No interviene ningún LLM, así que no se inventa nada.
+
+Para mejores respuestas, escribilo en Markdown (con la misma forma que `kb.example/`): elegís las secciones y podés agregar lo que el PDF no dice, como "HubSpot (CRM)" o "never used Kubernetes in production". PDF y Markdown pueden convivir. Todo lo que esté en una carpeta que empieza con `_` (como `kb/_drafts/`) se ignora, y `kb/` está en `.gitignore`, así que tu CV nunca se commitea.
 
 ## Licencia
 

@@ -17,7 +17,7 @@ Before changing architecture, read `docs/adr/`. Terms (chunk, section path, rele
 - `ENGINE=pipeline` (steps 3–6, `rag.answer`) or `ENGINE=graph` (step 7, `graph.answer_with_graph`): same arguments, same `Answer`. The pipeline stays as the lessons wrote it.
 - The API (`api.py`, step 8) gets a `question → Answer` function injected (`create_app(ask)`). Every dynamic value in the page goes through `html.escape`, and the page has no JavaScript (CSP `script-src 'none'`).
 - The vector stores implement `VectorStore` (`upsert`, `search(query, mode, k)`). An unsupported mode raises `UnsupportedSearchMode` (ADR-0007).
-- The KB is Markdown with frontmatter under `KB_DIR`: `kb.example/` is a fictional persona written in English, and `kb/` holds the user's real data (never commit `kb/_drafts/`).
+- The KB is Markdown with frontmatter (or a CV as PDF, `pdf.py`: fixed rules, no LLM) under `KB_DIR`: `kb.example/` is a fictional persona written in English, and `kb/` holds the user's real data and is gitignored. Path parts starting with `_` are skipped.
 - Chunks are split by H2 (H3 when present). Sections over ~1500 chars are split by paragraph. The embedded text is prefixed with the heading breadcrumb; the stored section stays bare for citations.
 
 ## Testing

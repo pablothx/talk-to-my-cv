@@ -40,7 +40,9 @@ Every change is measured against 20 questions about a fictional persona ([step 5
 
 ## Use it with your own CV
 
-Put your Markdown in `kb/` (same shape as `kb.example/`), set `KB_DIR=kb` in `.env`, and run `make ingest`. Files under `kb/_drafts/` are ignored.
+The fastest way: drop your CV as a PDF in `kb/`, set `KB_DIR=kb` in `.env`, and run `make ingest`. ALL-CAPS lines (`PROFESSIONAL EXPERIENCE`) become sections, and lines ending in a year range (`Senior Engineer, Acme (2021 – Present)`) become one chunk per job. No LLM is involved, so nothing gets invented.
+
+For better answers, write Markdown instead (same shape as `kb.example/`): you choose the sections, and you can add what a PDF doesn't say, like "HubSpot (CRM)" or "never used Kubernetes in production". PDFs and Markdown can live side by side. Anything under a folder starting with `_` (like `kb/_drafts/`) is ignored, and `kb/` is gitignored so your CV is never committed.
 
 ## License
 

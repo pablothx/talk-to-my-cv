@@ -1,10 +1,12 @@
 """Idempotent ingestion of a Markdown KB into a vector store (ADR-0005)."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from talk_to_my_cv.chunking import Chunk, chunk_document
 from talk_to_my_cv.embeddings import Embedder
+from talk_to_my_cv.pdf import extract_pdf_text, markdown_from_cv_text
 from talk_to_my_cv.store import EmbeddingModel, VectorStore
 
 
@@ -20,14 +22,19 @@ class EmbeddingModelMismatch(Exception):
     pass
 
 
-def load_chunks(kb_dir: Path) -> list[Chunk]:
-    """Every chunk of every Markdown file, except drafts (any path part starting with `_`)."""
+def load_chunks(kb_dir: Path, pdf_text: Callable[[Path], str] = extract_pdf_text) -> list[Chunk]:
+    """Every chunk of every Markdown or PDF file, except drafts (a path part starting with `_`)."""
     chunks: list[Chunk] = []
-    for path in sorted(kb_dir.rglob("*.md")):
+    paths = sorted([*kb_dir.rglob("*.md"), *kb_dir.rglob("*.pdf")])
+    for path in paths:
         relative = path.relative_to(kb_dir)
         if any(part.startswith("_") for part in relative.parts):
             continue
-        chunks.extend(chunk_document(path.relative_to(kb_dir).as_posix(), path.read_text()))
+        if path.suffix == ".pdf":
+            markdown = markdown_from_cv_text(pdf_text(path))
+        else:
+            markdown = path.read_text()
+        chunks.extend(chunk_document(relative.as_posix(), markdown))
     return chunks
 
 
