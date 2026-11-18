@@ -30,7 +30,7 @@ make doctor
 | 6 | [Hybrid search with OpenSearch](lessons/06-hybrid-search/README.md) | `step-06` |
 | 7 | [LangGraph and verification](lessons/07-langgraph/README.md) | `step-07` |
 | 8 | [API and web page](lessons/08-api-and-web/README.md) | `step-08` |
-| Bonus | Production on AWS | coming soon |
+| Bonus | [Production on AWS](docs/production-on-aws.md) | — |
 
 ## How well does it work?
 

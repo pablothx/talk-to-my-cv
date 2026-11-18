@@ -30,7 +30,7 @@ make doctor
 | 6 | [Búsqueda híbrida con OpenSearch](lessons/06-hybrid-search/README.es.md) | `step-06` |
 | 7 | [LangGraph y verificación](lessons/07-langgraph/README.es.md) | `step-07` |
 | 8 | [API y página web](lessons/08-api-and-web/README.es.md) | `step-08` |
-| Bonus | Producción en AWS | próximamente |
+| Bonus | [Producción en AWS](docs/produccion-en-aws.md) | — |
 
 ## ¿Qué tan bien anda?
 
