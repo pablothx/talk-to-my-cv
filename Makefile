@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv run
 
-.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03 check-04 eval eval-sweep eval-all check-05 check-06 check-07
+.PHONY: help install up down doctor lint test test-e2e embed similarity ingest chat ask check-00 check-01 check-02 check-03 check-04 eval eval-sweep eval-all check-05 check-06 check-07 serve api-up api-down check-08
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -45,6 +45,20 @@ chat: ## Chat with the KB (DEBUG=1 shows retrieved chunks and scores)
 
 ask: ## Ask one question Q="..." (DEBUG=1 shows retrieved chunks and scores)
 	@$(UV) python -m talk_to_my_cv.cli chat $(DEBUG_FLAG) "$(Q)"
+
+PORT ?= 8000
+
+serve: ## Run the API and web page on http://localhost:$(PORT) (host Python)
+	$(UV) uvicorn --factory talk_to_my_cv.api:app_from_settings --port $(PORT)
+
+LINUX := $(filter Linux,$(shell uname -s))
+API_PROFILES = --profile api $(if $(LINUX),--profile bridge)
+
+api-up: ## Build and start the API container on http://localhost:8000 (Linux: plus ollama-bridge)
+	docker compose $(API_PROFILES) up -d --build --wait api $(if $(LINUX),ollama-bridge)
+
+api-down: ## Stop the API container
+	docker compose $(API_PROFILES) stop api $(if $(LINUX),ollama-bridge)
 
 STORE ?= pgvector
 MODE ?= vector
@@ -92,3 +106,7 @@ check-06: check-05 ## Step 6: OpenSearch and hybrid search
 check-07: check-06 ## Step 7: LangGraph flow with LLM verification
 	$(UV) pytest -m e2e tests/test_graph_e2e.py
 	@echo "✓ step 07 OK"
+
+check-08: check-07 api-up ## Step 8: API and web page, in a container
+	$(UV) pytest -m e2e tests/test_api_e2e.py
+	@echo "✓ step 08 OK"

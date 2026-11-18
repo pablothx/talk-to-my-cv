@@ -1,0 +1,8 @@
+# Allowlist: the image gets the package and its config, never .env or kb/ (your real data).
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!config/
+**/__pycache__

@@ -8,6 +8,7 @@ from pathlib import Path
 from talk_to_my_cv.chat_models import build_chat_model
 from talk_to_my_cv.config import load_settings
 from talk_to_my_cv.embeddings import build_embedder, cosine_similarity, relevance_threshold
+from talk_to_my_cv.engines import ENGINES
 from talk_to_my_cv.evaluation import (
     choose_threshold,
     load_questions,
@@ -15,15 +16,11 @@ from talk_to_my_cv.evaluation import (
     sweep,
     write_report,
 )
-from talk_to_my_cv.graph import answer_with_graph
 from talk_to_my_cv.ingest import EmbeddingModelMismatch
 from talk_to_my_cv.ingest import ingest as run_ingest
-from talk_to_my_cv.rag import Answer, answer
+from talk_to_my_cv.rag import Answer
 from talk_to_my_cv.store import SearchMode, build_store
 from talk_to_my_cv.sweep_plot import plot_sweep
-
-# Both take the same arguments and return an Answer: ENGINE picks one (step 7).
-ENGINES = {"pipeline": answer, "graph": answer_with_graph}
 
 
 def embed(text: str) -> None:

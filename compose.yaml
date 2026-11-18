@@ -1,4 +1,4 @@
-# Infrastructure only: Python runs on the host with uv (ADR-0001).
+# Infrastructure, plus the optional step 8 API container. Python runs on the host (ADR-0001).
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -33,6 +33,35 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+
+  # Step 8, optional: the API in a container (`docker compose --profile api up -d --build`).
+  # It reaches Ollama running natively on your machine through host.docker.internal.
+  api:
+    build: .
+    profiles: [api]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      OLLAMA_HOST: ${API_OLLAMA_HOST:-http://host.docker.internal:11434}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/talk_to_my_cv
+      OPENSEARCH_URL: http://opensearch:9200
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Linux only (`make api-up` adds it): native Ollama listens on 127.0.0.1, which containers
+  # can't reach. This forwards the docker0 address (what host.docker.internal resolves to) to
+  # it, without exposing Ollama to your network. Docker Desktop (macOS, Windows) doesn't need it.
+  ollama-bridge:
+    image: alpine/socat:1.8.0.3
+    profiles: [bridge]
+    network_mode: host
+    command: TCP-LISTEN:11434,bind=${DOCKER_HOST_IP:-172.17.0.1},fork,reuseaddr TCP:127.0.0.1:11434
 
   # Optional: only if you don't run Ollama natively (`docker compose --profile ollama up -d`).
   # It publishes the same port as native Ollama, so run one or the other.

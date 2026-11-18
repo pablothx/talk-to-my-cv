@@ -29,7 +29,7 @@ make doctor
 | 5 | [Evaluation](lessons/05-evaluation/README.md) | `step-05` |
 | 6 | [Hybrid search with OpenSearch](lessons/06-hybrid-search/README.md) | `step-06` |
 | 7 | [LangGraph and verification](lessons/07-langgraph/README.md) | `step-07` |
-| 8 | API and web | coming soon |
+| 8 | [API and web page](lessons/08-api-and-web/README.md) | `step-08` |
 | Bonus | Production on AWS | coming soon |
 
 ## How well does it work?
