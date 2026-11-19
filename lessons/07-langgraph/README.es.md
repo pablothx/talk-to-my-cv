@@ -2,32 +2,39 @@
 
 🇬🇧 [Read in English](README.md)
 
+El chat todavía cae en la trampa de JavaScript: responde "No" con citas, cuando el CV no dice nada. En este paso agregamos una **verificación** antes de responder, y reescribimos el flujo como un **grafo**. Acá entra, por primera vez, un framework: LangGraph.
+
 ## Qué vas a aprender
 
-- A escribir el flujo del RAG como un **grafo** con LangGraph: nodos, estado y ruteo condicional.
-- A agregar una **verificación** antes de responder, y por qué un modelo chico es mal juez.
+- A escribir el flujo de un RAG como un **grafo**: nodos, estado y ruteo condicional.
+- Por qué un modelo chico es **mal juez**, medido.
 - Un patrón que sirve mucho con modelos chicos: **el LLM extrae, el código decide**.
-- A **reformular** la pregunta para que la búsqueda por palabras entienda preguntas en español.
+- A **reformular** la pregunta para que la búsqueda por palabras entienda español.
 
-## El concepto
+---
 
-### De una función a un grafo
+## Pieza 1: de una función a un grafo
 
-Hasta el paso 6, `answer()` era una función de arriba hacia abajo: buscar, cortar, preguntarle al LLM. Cada paso nuevo (reformular, verificar) agrega un `if`, y la función se vuelve difícil de leer y de testear.
+Hasta el paso 6, `answer()` era una función de arriba hacia abajo: buscar, cortar, preguntarle al LLM. Cada paso nuevo (reformular, verificar) agregaría un `if`, y la función se volvería difícil de leer y de testear.
 
-LangGraph lo escribe como un grafo: cada **nodo** es una función que lee el **estado** y devuelve lo que cambia, y las **aristas condicionales** deciden a qué nodo se va después.
+LangGraph lo escribe como un **grafo**:
+
+- cada **nodo** es una función que lee el **estado** (un diccionario con la pregunta, los chunks, etc.) y devuelve lo que cambia;
+- las **aristas condicionales** deciden a qué nodo se va después.
 
 ```
-   [reformular] → buscar → corte ─┬─ nada supera el umbral ──────────────→ rechazar
+   [reformular] → buscar → corte ─┬─ nada llega al umbral ───────────────→ rechazar
                                   └─ verificar ─┬─ falta un nombre ──────→ rechazar
                                                 └─ si no → responder con citas
 ```
 
-`reformular` solo corre en los modos `keyword` e `hybrid` (más abajo, por qué).
+`reformular` solo corre en los modos `keyword` e `hybrid` (pieza 6).
 
-### La verificación que no anduvo
+¿Por qué LangGraph recién ahora? Porque hasta acá el flujo era una línea recta y no hacía falta ([ADR-0003](../../docs/adr/0003-own-seams-no-langchain-before-step-7.md)). Ahora hay ramas.
 
-El [ADR-0009](../../docs/adr/0009-top1-gate-does-not-separate-alone.md) pedía, después de la búsqueda, una verificación con el LLM. La idea obvia es preguntarle: "¿este CONTEXTO responde la PREGUNTA? Contestá SÍ o NO".
+## Pieza 2: la verificación que no anduvo
+
+El paso 5 pidió una verificación después de la búsqueda. La idea obvia es preguntarle al LLM: "¿este CONTEXTO responde la PREGUNTA? Contestá SÍ o NO".
 
 La probamos con `qwen2.5:3b` en 6 preguntas con respuesta conocida, con tres prompts distintos:
 
@@ -42,7 +49,7 @@ La probamos con `qwen2.5:3b` en 6 preguntas con respuesta conocida, con tres pro
 
 Ante la duda, el modelo dice que NO. Como verificador, rechazaría preguntas que sí tienen respuesta. **Un modelo de 3B es mal juez.**
 
-### El LLM extrae, el código decide
+## Pieza 3: el LLM extrae
 
 El mismo modelo sí es bueno para una tarea más chica: **extraer** el nombre concreto por el que se pregunta.
 
@@ -54,33 +61,61 @@ El mismo modelo sí es bueno para una tarea más chica: **extraer** el nombre co
 | What is her tech stack? | `NONE` |
 | ¿Dónde estudió? | `NONE` |
 
-Después, **el código** se fija si ese nombre aparece en los chunks que pasaron el corte: palabra completa, sin importar mayúsculas ni acentos. "Java" no cuenta como "JavaScript". Si falta, rechaza sin escribir una respuesta. Si la pregunta es general (`NONE`), deja que decida el prompt de respuesta del paso 4.
+`NONE` quiere decir "esta pregunta no nombra nada específico".
 
-Es la señal que encontramos en el paso 6 ("ninguna palabra de la pregunta está en la KB"), pero ahora anda en **cualquier** store y modo, también con pgvector, y con preguntas en español, porque el extractor escribe los nombres en inglés ([ADR-0011](../../docs/adr/0011-verify-by-extracting-names-not-by-judging.md)).
+## Pieza 4: el código decide
+
+Después, **el código** se fija si ese nombre aparece en los chunks que pasaron el corte:
+
+- palabra completa: "Java" **no** cuenta como "JavaScript";
+- sin importar mayúsculas ni acentos.
+
+| Resultado | Qué hace |
+|---|---|
+| El nombre está en el contexto | Sigue y responde. |
+| El nombre **no** está | Rechaza, sin escribir una respuesta. |
+| `NONE` (pregunta general) | Sigue: decide el prompt del paso 4. |
+
+Si la pregunta nombra varias cosas ("¿Usó Kafka y Flink?"), alcanza con que **una** esté: la respuesta puede ser parcial ("Kafka sí; de Flink no hay información").
+
+Es la señal que encontramos en el paso 6 ("ninguna palabra de la pregunta está en el CV"), pero ahora anda en **cualquier** store y modo, también con pgvector, y con preguntas en español, porque el extractor escribe los nombres en inglés ([ADR-0011](../../docs/adr/0011-verify-by-extracting-names-not-by-judging.md)).
 
 > **El patrón:** no le pidas a un modelo chico que juzgue. Pedile que extraiga algo concreto, y hacé la comparación con código, que no se equivoca ni se deja convencer.
 
-### Reformular para la búsqueda por palabras
+## Pieza 5: cuando el extractor responde cualquier cosa
 
-BM25 no traduce: "¿Qué idiomas habla?" no comparte ninguna palabra con "Spanish, English, Esperanto". En los modos `keyword` e `hybrid`, el grafo primero le pide al LLM que reescriba la pregunta como palabras clave en inglés, y esa es la consulta de BM25.
+Un modelo chico a veces no responde lo pedido: escribe una oración, explica, o lista categorías ("technologies"). El código (`parse_terms()`) se protege:
 
-El **vector** sigue saliendo de la pregunta original. Así el umbral calibrado en el paso 5 sigue valiendo, porque se calibró con preguntas, no con palabras clave. En modo `vector` no hay nada que reformular, y el nodo no corre.
+- si algún "nombre" tiene más de 4 palabras, es charla y no una lista: se descarta todo y se toma como "no hay nombres";
+- se limpian comillas, asteriscos y puntos que el modelo agrega.
 
-## El código
+Ante la duda, **no rechaza**: deja que siga el flujo normal. Es mejor perder una verificación que rechazar una pregunta buena.
 
-| Archivo | Qué hace |
-|---------|----------|
-| `src/talk_to_my_cv/graph.py` | El grafo: los nodos `reformulate`, `retrieve`, `verify`, `generate` y `refuse`; `parse_terms()` y `mentions()`, y `answer_with_graph()`. |
-| `src/talk_to_my_cv/rag.py` | El pipeline del paso 3, sin cambios. `Answer` suma `verified` y `query`. |
-| `src/talk_to_my_cv/cli.py` | `ENGINE=pipeline` o `ENGINE=graph` elige cuál usar. |
+## Pieza 6: reformular para la búsqueda por palabras
 
-`answer_with_graph()` recibe los mismos argumentos y devuelve el mismo `Answer` que `answer()`. Por eso el chat, la eval y los tests no saben cuál están usando. El pipeline queda como lo escribieron las lecciones 3 a 6.
+BM25 no traduce: "¿Qué idiomas habla?" no comparte palabras con "Spanish, English, Esperanto". En los modos `keyword` e `hybrid`, el grafo primero le pide al LLM que reescriba la pregunta como palabras clave en inglés, y esa es la consulta de BM25.
+
+El **vector** sigue saliendo de la pregunta original. Así el umbral sigue valiendo, porque se calibró con preguntas, no con palabras clave. En modo `vector` no hay nada que reformular y el nodo no corre.
+
+## Pieza 7: mismo contrato, otro motor
+
+`answer_with_graph()` recibe los mismos argumentos y devuelve el mismo `Answer` que `answer()`. Por eso el chat, la eval y la API no saben cuál están usando:
 
 ```bash
 ENGINE=graph            # en .env; pipeline es el default
 ```
 
-Los tests unitarios prueban cada camino del grafo con un `ScriptedChatModel` que responde en orden: el corte rechaza sin llamar al LLM, un nombre que falta rechaza sin escribir una respuesta, `NONE` deja decidir al prompt, y reformular cambia la consulta de BM25 pero no el vector.
+El pipeline queda como lo escribieron las lecciones 3 a 6.
+
+| Archivo | Qué hace |
+|---------|----------|
+| `src/talk_to_my_cv/graph.py` | Los nodos `reformulate`, `retrieve`, `verify`, `generate` y `refuse`; `parse_terms()`, `mentions()` y `answer_with_graph()`. |
+| `src/talk_to_my_cv/engines.py` | `ENGINES`: `pipeline` o `graph`. |
+| `src/talk_to_my_cv/rag.py` | El pipeline, sin cambios. `Answer` suma `verified` y `query`. |
+
+Los tests unitarios prueban cada camino del grafo con un `ScriptedChatModel`, un LLM falso que responde lo que le guionás, en orden.
+
+---
 
 ## Cómo comprobar que anda
 
@@ -117,24 +152,83 @@ Las trampas:
 
 Lo que hay que mirar:
 
-1. **JavaScript se arregla en todos los stores y modos.** El extractor saca `JavaScript`, el código no lo encuentra en el contexto y rechaza. Antes solo lo lograba el modo keyword del paso 6.
-2. **Azure ahora se rechaza por una regla, no por suerte.** Con el pipeline también se rechazaba, pero porque el LLM decidía rechazar, y eso no siempre pasa (paso 4). Ahora lo rechaza el código, siempre igual.
-3. **Las métricas de las preguntas puntuadas no cambian.** Las que fallan, fallan por otra cosa: en `degree` el chunk con la respuesta no pasa el corte (0.41); en `team-size` el único chunk que lo pasa es `Contact`, que no dice nada del equipo; y `talk` traduce el título de la charla (paso 5). Verificar no puede agregar lo que la búsqueda no trajo.
-4. **Reformular salva a la búsqueda por palabras:** hit@5 pasa de 0.64 a 0.82 y MRR de 0.52 a 0.77, porque las preguntas en español llegan a BM25 en inglés.
-5. **Cuesta poco.** Extraer un nombre genera muy pocos tokens: en CPU, el grafo tarda casi lo mismo que el pipeline.
+1. **JavaScript se arregla en todos los stores y modos.** El extractor saca `JavaScript`, el código no lo encuentra y rechaza.
+2. **Azure ahora se rechaza por una regla, no por suerte.** Antes lo rechazaba el LLM cuando quería; ahora el código, siempre igual.
+3. **Las métricas de las preguntas puntuadas no cambian.** Las que fallan, fallan por otra cosa: en `degree` el chunk con la respuesta no pasa el corte (0.41); en `team-size` el único chunk que lo pasa es `Contact`; `talk` traduce el título de la charla (paso 5). **Verificar no puede agregar lo que la búsqueda no trajo.**
+4. **Reformular salva a la búsqueda por palabras:** hit@5 pasa de 0.64 a 0.82, porque las preguntas en español llegan a BM25 en inglés.
+5. **Cuesta poco.** Extraer un nombre genera muy pocas palabras: el grafo tarda casi lo mismo que el pipeline.
 
-**CRM sigue sin arreglo,** y ahora se rechaza a propósito: el extractor saca `CRM` y la KB nunca lo nombra. La solución sigue siendo escribir "HubSpot (CRM)" en la KB.
+**CRM sigue sin arreglo,** y ahora se rechaza a propósito: el extractor saca `CRM` y el CV nunca lo nombra. La solución sigue siendo "HubSpot (CRM)".
 
-**El objetivo de refusal accuracy ≥ 0.9 sigue sin cumplirse (0.88).** Los dos errores que quedan son rechazos de más (`team-size` y `degree`), y en los dos el chunk con la respuesta no supera el umbral. Bajar el umbral ahora que hay verificación es tentador, pero se calibraría con las mismas 20 preguntas (paso 5).
+**El objetivo de ≥ 0.9 sigue sin cumplirse (0.88).** Los dos errores que quedan son rechazos de más, en los dos el chunk correcto no llega al umbral. Bajar el umbral ahora es tentador, pero se calibraría con las mismas 20 preguntas.
 
 ## Para jugar
 
-1. **Probá el juez.** En `graph.py`, cambiá `verify` para que le pregunte al LLM "¿el CONTEXTO responde la PREGUNTA? SÍ o NO" y use la respuesta directo. Corré `make eval ENGINE=graph`. ¿Cuántas preguntas con respuesta rechaza? Si tenés una key de Groq, probalo con `LLM_PROVIDER=groq`: ¿un modelo de 70B juzga mejor?
-2. **Bajá el umbral.** Ahora que la verificación atrapa los nombres que faltan, probá `make eval ENGINE=graph THRESHOLD=0.40`. ¿Se salvan `team-size` y `degree`? ¿Qué preguntas sin respuesta pasan ahora? Acordate del sobreajuste.
-3. **Engañá al extractor.** Escribí preguntas que nombren algo con otras palabras: "¿Usó K8s?", "¿Programó en JS?". ¿Qué extrae? ¿Rechaza aunque la KB diga "Kubernetes"?
+1. **Probá el juez.** En `graph.py`, cambiá `verify` para que pregunte "¿el CONTEXTO responde la PREGUNTA? SÍ o NO" y use la respuesta directo. Corré `make eval ENGINE=graph`. ¿Cuántas preguntas buenas rechaza?
+2. **Bajá el umbral.** Probá `make eval ENGINE=graph THRESHOLD=0.40`. ¿Se salvan `team-size` y `degree`? ¿Qué preguntas sin respuesta pasan ahora? Acordate del sobreajuste.
+3. **Engañá al extractor.** "¿Usó K8s?", "¿Programó en JS?". ¿Qué extrae? ¿Rechaza aunque el CV diga "Kubernetes"?
 
 ## Limitaciones conocidas
 
-- **Sinónimos y siglas:** "K8s" no encuentra "Kubernetes", y "CRM" no encuentra "HubSpot". La verificación es tan literal como la KB.
-- **Preguntas sin nombres:** "¿Cuánto cobra?" no nombra nada, así que la verificación no la puede atrapar. Esas siguen dependiendo del corte y del prompt.
-- **Una llamada más al LLM** por pregunta que pasa el corte (dos en `keyword` e `hybrid`). En CPU es poco, porque las respuestas son cortas; con un modelo remoto es una llamada de red más.
+- **Sinónimos y siglas:** "K8s" no encuentra "Kubernetes", y "CRM" no encuentra "HubSpot". La verificación es tan literal como el CV.
+- **Preguntas sin nombres:** "¿Cuánto cobra?" no nombra nada, así que la verificación no la atrapa. Esas dependen del corte y del prompt.
+- **Una llamada más al LLM** por pregunta que pasa el corte (dos en `keyword` e `hybrid`).
+
+---
+
+## Preguntas frecuentes
+
+<details>
+<summary><b>Si el CV nombra "Marcos" en otro contexto, ¿la verificación lo deja pasar?</b></summary>
+
+Sí. La verificación solo comprueba que el nombre **aparezca** en los chunks recuperados, no que se hable de lo mismo. Si preguntás por el "profeta Marcos" y aparece "Juan Marcos" en un pedazo, pasa, y la respuesta va a hablar de ese Marcos. Es una verificación barata y literal, no una comprensión.
+</details>
+
+<details>
+<summary><b>¿Con un modelo grande serviría el juez SÍ/NO?</b></summary>
+
+Probablemente mucho mejor: los modelos grandes juzgan bastante bien. Pero hay que medirlo con la eval, igual que hicimos acá. Y el patrón "extraer + comparar con código" sigue siendo más barato y repetible.
+</details>
+
+---
+
+## ✋ Repaso
+
+**1. ¿Por qué pasar de una función a un grafo?**
+
+<details><summary>Ver respuesta</summary>
+
+Porque el flujo ahora tiene ramas (rechazar en el corte, rechazar en la verificación, responder). Con un grafo, cada paso es un nodo que se testea solo, y el ruteo queda explícito en vez de enterrado en `if`s.
+</details>
+
+**2. ¿Qué falló del juez SÍ/NO?**
+
+<details><summary>Ver respuesta</summary>
+
+Ante la duda, `qwen2.5:3b` dice NO: rechazaba preguntas con respuesta (Kubernetes, dónde trabaja). Un modelo chico es mal juez.
+</details>
+
+**3. ¿Qué es "el LLM extrae, el código decide"?**
+
+<details><summary>Ver respuesta</summary>
+
+Pedirle al modelo una tarea chica y concreta (sacar el nombre de la pregunta) y hacer la decisión con código determinístico (¿está ese nombre en los chunks?). El código no se equivoca ni se deja convencer.
+</details>
+
+**4. 🧪 Probalo:** `ENGINE=graph make ask DEBUG=1 Q="Has she worked with JavaScript?"`. ¿Qué esperás en el debug?
+
+<details><summary>Ver respuesta</summary>
+
+`named terms in the context: NO → refuse` y el rechazo fijo. El extractor saca "JavaScript", y ningún chunk la contiene como palabra completa ("Java" no cuenta).
+</details>
+
+**5. ¿Por qué el vector sale de la pregunta original y no de la reformulada?**
+
+<details><summary>Ver respuesta</summary>
+
+Porque el umbral se calibró con preguntas, no con listas de palabras clave. Si el vector saliera de la reformulación, los scores cambiarían y el 0.42 dejaría de valer.
+</details>
+
+---
+
+[← Paso 6](../06-hybrid-search/README.es.md) · [Índice](../../README.es.md) · [Siguiente: Paso 8, API y web →](../08-api-and-web/README.es.md)

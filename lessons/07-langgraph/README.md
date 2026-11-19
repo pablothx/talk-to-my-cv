@@ -2,47 +2,54 @@
 
 🇪🇸 [Leer en español](README.es.md)
 
+The chat still falls for the JavaScript trap: it answers "No" with citations, when the CV says nothing. In this step we add a **check** before answering, and rewrite the flow as a **graph**. Here, for the first time, a framework comes in: LangGraph.
+
 ## What you'll learn
 
-- How to write the RAG flow as a **graph** with LangGraph: nodes, state and conditional routing.
-- How to add a **verification** step before answering, and why a small model is a poor judge.
-- A pattern that works well with small models: **the LLM extracts, code decides**.
-- How to **reformulate** the question so keyword search understands questions in Spanish.
+- How to write a RAG's flow as a **graph**: nodes, state and conditional routing.
+- Why a small model is a **bad judge**, measured.
+- A pattern that works well with small models: **the LLM extracts, the code decides**.
+- How to **rewrite** the question so keyword search understands Spanish.
 
-## The concept
+---
 
-### From a function to a graph
+## Piece 1: from a function to a graph
 
-Up to step 6, `answer()` was a top-to-bottom function: search, gate, ask the LLM. Every new step (reformulate, verify) adds an `if`, and the function gets hard to read and to test.
+Until step 6, `answer()` was a top-to-bottom function: search, gate, ask the LLM. Every new step (rewrite, verify) would add an `if`, and the function would get hard to read and test.
 
-LangGraph writes it as a graph: each **node** is a function that reads the **state** and returns what changes, and **conditional edges** decide which node runs next.
+LangGraph writes it as a **graph**:
+
+- each **node** is a function that reads the **state** (a dictionary with the question, the chunks, etc.) and returns what changes;
+- **conditional edges** decide which node comes next.
 
 ```
-   [reformulate] → retrieve → gate ─┬─ nothing above the threshold ─────────→ refuse
-                                    └─ verify ─┬─ a name is missing ────────→ refuse
-                                               └─ otherwise → answer with citations
+   [rewrite] → retrieve → gate ─┬─ nothing reaches the threshold ───────→ refuse
+                                └─ verify ─┬─ a name is missing ────────→ refuse
+                                           └─ otherwise → answer with citations
 ```
 
-`reformulate` only runs in `keyword` and `hybrid` modes (see why below).
+`rewrite` only runs in `keyword` and `hybrid` modes (piece 6).
 
-### The verification that didn't work
+Why LangGraph only now? Because until now the flow was a straight line and didn't need it ([ADR-0003](../../docs/adr/0003-own-seams-no-langchain-before-step-7.md)). Now it has branches.
 
-[ADR-0009](../../docs/adr/0009-top1-gate-does-not-separate-alone.md) called for an LLM verification step after search. The obvious idea is to ask it: "does this CONTEXT answer the QUESTION? Reply YES or NO".
+## Piece 2: the check that didn't work
 
-We tried it with `qwen2.5:3b` on 6 questions with a known answer, using three different prompts:
+Step 5 called for a check after the search. The obvious idea is to ask the LLM: "does this CONTEXT answer the QUESTION? Reply YES or NO".
+
+We tried it with `qwen2.5:3b` on 6 questions with known answers, with three different prompts:
 
 | Question | Expected | Prompt A | Prompt B | Prompt C |
 |---|:-:|:-:|:-:|:-:|
 | How much did Project Lumen speed up reconciliation? | YES | ✓ | ✓ | ✗ |
 | Has she used Kubernetes in production? | YES | ✗ | ✗ | ✗ |
 | Has she worked with JavaScript? | NO | ✓ | ✓ | ✓ |
-| ¿Trabajó con Azure? *(Did she work with Azure?)* | NO | ✓ | ✓ | ✓ |
-| ¿Dónde trabaja actualmente y qué rol tiene? *(Where does she work now, and in what role?)* | YES | ✗ | ✗ | ✗ |
+| ¿Trabajó con Azure? | NO | ✓ | ✓ | ✓ |
+| ¿Dónde trabaja actualmente y qué rol tiene? | YES | ✗ | ✗ | ✗ |
 | What is her tech stack? | YES | ✓ | ✓ | ✓ |
 
-When in doubt, the model says NO. As a verifier, it would refuse questions that do have an answer. **A 3B model is a poor judge.**
+When in doubt, the model says NO. As a checker, it would refuse questions that have an answer. **A 3B model is a bad judge.**
 
-### The LLM extracts, code decides
+## Piece 3: the LLM extracts
 
 The same model is good at a smaller task: **extracting** the specific name the question asks about.
 
@@ -50,37 +57,65 @@ The same model is good at a smaller task: **extracting** the specific name the q
 |---|---|
 | Has she worked with JavaScript? | `JavaScript` |
 | ¿Trabajó con Azure? | `Azure` |
-| ¿Usó Kubernetes? *(Did she use Kubernetes?)* | `Kubernetes` |
+| ¿Usó Kubernetes? | `Kubernetes` |
 | What is her tech stack? | `NONE` |
-| ¿Dónde estudió? *(Where did she study?)* | `NONE` |
+| ¿Dónde estudió? | `NONE` |
 
-Then **code** checks whether that name appears in the chunks that passed the gate: whole word, ignoring case and accents. "Java" doesn't count as "JavaScript". If it's missing, it refuses without writing an answer. If the question is general (`NONE`), it lets step 4's answer prompt decide.
+`NONE` means "this question doesn't name anything specific".
 
-It's the signal we found in step 6 ("none of the question's words is in the KB"), but now it works in **any** store and mode, pgvector included, and with questions in Spanish, because the extractor writes names in English ([ADR-0011](../../docs/adr/0011-verify-by-extracting-names-not-by-judging.md)).
+## Piece 4: the code decides
 
-> **The pattern:** don't ask a small model to judge. Ask it to extract something specific, and do the comparison in code, which doesn't make mistakes and can't be talked around.
+Then **the code** checks whether that name appears in the chunks that passed the gate:
 
-### Reformulating for keyword search
+- whole word: "Java" does **not** count as "JavaScript";
+- ignoring case and accents.
 
-BM25 doesn't translate: "¿Qué idiomas habla?" ("What languages does she speak?") shares no words with "Spanish, English, Esperanto". In `keyword` and `hybrid` modes, the graph first asks the LLM to rewrite the question as English keywords, and those are the BM25 query.
+| Result | What it does |
+|---|---|
+| The name is in the context | Goes on and answers. |
+| The name is **not** there | Refuses, without writing an answer. |
+| `NONE` (general question) | Goes on: step 4's prompt decides. |
 
-The **vector** still comes from the original question. That way the threshold calibrated in step 5 still holds, because it was calibrated on questions, not keywords. In `vector` mode there's nothing to reformulate, and the node doesn't run.
+If the question names several things ("Did she use Kafka and Flink?"), one being there is enough: the answer can be partial ("Kafka yes; nothing about Flink").
 
-## The code
+It's the signal we found in step 6 ("none of the question's words is in the CV"), but now it works in **any** store and mode, pgvector included, and with Spanish questions, because the extractor writes names in English ([ADR-0011](../../docs/adr/0011-verify-by-extracting-names-not-by-judging.md)).
 
-| File | What it does |
-|------|--------------|
-| `src/talk_to_my_cv/graph.py` | The graph: the `reformulate`, `retrieve`, `verify`, `generate` and `refuse` nodes; `parse_terms()` and `mentions()`, and `answer_with_graph()`. |
-| `src/talk_to_my_cv/rag.py` | Step 3's pipeline, unchanged. `Answer` gains `verified` and `query`. |
-| `src/talk_to_my_cv/cli.py` | `ENGINE=pipeline` or `ENGINE=graph` picks which one to use. |
+> **The pattern:** don't ask a small model to judge. Ask it to extract something concrete, and do the comparison in code, which doesn't make mistakes or get talked into anything.
 
-`answer_with_graph()` takes the same arguments and returns the same `Answer` as `answer()`. So the chat, the eval and the tests don't know which one they're using. The pipeline stays as lessons 3 to 6 wrote it.
+## Piece 5: when the extractor replies with anything
+
+A small model sometimes doesn't reply as asked: it writes a sentence, explains, or lists categories ("technologies"). The code (`parse_terms()`) protects itself:
+
+- if any "name" has more than 4 words, it's chatter, not a list: everything is dropped and treated as "no names";
+- it strips the quotes, asterisks and periods the model adds.
+
+When in doubt, it **doesn't refuse**: the normal flow goes on. Losing a check is better than refusing a good question.
+
+## Piece 6: rewriting for keyword search
+
+BM25 doesn't translate: "¿Qué idiomas habla?" shares no words with "Spanish, English, Esperanto". In `keyword` and `hybrid` modes, the graph first asks the LLM to rewrite the question as English keywords, and that's BM25's query.
+
+The **vector** still comes from the original question. That way the threshold still holds, because it was calibrated with questions, not keywords. In `vector` mode there's nothing to rewrite and the node doesn't run.
+
+## Piece 7: same contract, another engine
+
+`answer_with_graph()` takes the same arguments and returns the same `Answer` as `answer()`. So the chat, the eval and the API don't know which one they're using:
 
 ```bash
 ENGINE=graph            # in .env; pipeline is the default
 ```
 
-The unit tests cover every path through the graph with a `ScriptedChatModel` that replies in order: the gate refuses without calling the LLM, a missing name refuses without writing an answer, `NONE` lets the prompt decide, and reformulating changes the BM25 query but not the vector.
+The pipeline stays as lessons 3 to 6 wrote it.
+
+| File | What it does |
+|------|--------------|
+| `src/talk_to_my_cv/graph.py` | The `reformulate`, `retrieve`, `verify`, `generate` and `refuse` nodes; `parse_terms()`, `mentions()` and `answer_with_graph()`. |
+| `src/talk_to_my_cv/engines.py` | `ENGINES`: `pipeline` or `graph`. |
+| `src/talk_to_my_cv/rag.py` | The pipeline, unchanged. `Answer` gains `verified` and `query`. |
+
+The unit tests try every path of the graph with a `ScriptedChatModel`, a fake LLM that replies whatever you script, in order.
+
+---
 
 ## Check that it works
 
@@ -92,7 +127,7 @@ make eval ENGINE=graph                                   # ~1.5 min on a CPU
 make eval ENGINE=graph STORE=opensearch MODE=keyword     # ~2 min
 ```
 
-With `DEBUG=1` you see the reformulated query (if any) and whether the question's names were in the context.
+With `DEBUG=1` you see the rewritten query (if any) and whether the question's names were in the context.
 
 ## The results
 
@@ -117,24 +152,83 @@ The traps:
 
 What to look at:
 
-1. **JavaScript is fixed in every store and mode.** The extractor pulls out `JavaScript`, code doesn't find it in the context, and it refuses. Before, only step 6's keyword mode managed that.
-2. **Azure is now refused by a rule, not by luck.** The pipeline refused it too, but because the LLM decided to, and that doesn't always happen (step 4). Now code refuses it, the same way every time.
-3. **The metrics on the scored questions don't change.** The ones that fail, fail for another reason: in `degree` the chunk with the answer doesn't pass the gate (0.41); in `team-size` the only chunk that passes is `Contact`, which says nothing about the team; and `talk` translates the talk's title (step 5). Verification can't add what search didn't bring.
-4. **Reformulating rescues keyword search:** hit@5 goes from 0.64 to 0.82 and MRR from 0.52 to 0.77, because Spanish questions reach BM25 in English.
-5. **It's cheap.** Extracting a name generates very few tokens: on a CPU, the graph takes about as long as the pipeline.
+1. **JavaScript is fixed in every store and mode.** The extractor pulls `JavaScript`, the code doesn't find it and refuses.
+2. **Azure is now refused by a rule, not by luck.** Before, the LLM refused it when it felt like it; now the code does, always the same way.
+3. **The scored questions' metrics don't change.** The ones that fail, fail for other reasons: in `degree` the chunk with the answer doesn't pass the gate (0.41); in `team-size` the only chunk that passes is `Contact`; `talk` translates the talk's title (step 5). **Verifying can't add what search didn't bring.**
+4. **Rewriting rescues keyword search:** hit@5 goes from 0.64 to 0.82, because Spanish questions reach BM25 in English.
+5. **It's cheap.** Extracting a name produces very few words: the graph takes almost the same time as the pipeline.
 
-**CRM still isn't fixed,** and now it's refused on purpose: the extractor pulls out `CRM` and the KB never names it. The fix is still writing "HubSpot (CRM)" in the KB.
+**CRM is still unfixed,** and now it's refused on purpose: the extractor pulls `CRM` and the CV never names it. The fix is still "HubSpot (CRM)".
 
-**The refusal accuracy ≥ 0.9 target is still not met (0.88).** The two remaining errors are extra refusals (`team-size` and `degree`), and in both the chunk with the answer doesn't clear the threshold. Lowering the threshold now that there's verification is tempting, but it would be calibrated on the same 20 questions (step 5).
+**The ≥ 0.9 target is still missed (0.88).** The two remaining errors are extra refusals, and in both the right chunk doesn't reach the threshold. Lowering the threshold now is tempting, but it would be calibrated on the same 20 questions.
 
 ## Play with it
 
-1. **Try the judge.** In `graph.py`, change `verify` to ask the LLM "does the CONTEXT answer the QUESTION? YES or NO" and use the reply directly. Run `make eval ENGINE=graph`. How many answerable questions does it refuse? If you have a Groq key, try it with `LLM_PROVIDER=groq`: does a 70B model judge better?
-2. **Lower the threshold.** Now that verification catches missing names, try `make eval ENGINE=graph THRESHOLD=0.40`. Are `team-size` and `degree` saved? Which unanswerable questions get through now? Remember overfitting.
-3. **Fool the extractor.** Write questions that name something with other words: "Did she use K8s?", "Did she code in JS?". What does it extract? Does it refuse even though the KB says "Kubernetes"?
+1. **Try the judge.** In `graph.py`, change `verify` to ask "does the CONTEXT answer the QUESTION? YES or NO" and use the reply directly. Run `make eval ENGINE=graph`. How many good questions does it refuse?
+2. **Lower the threshold.** Try `make eval ENGINE=graph THRESHOLD=0.40`. Are `team-size` and `degree` saved? Which unanswerable questions get through now? Remember overfitting.
+3. **Fool the extractor.** "Did she use K8s?", "Did she code in JS?". What does it extract? Does it refuse even though the CV says "Kubernetes"?
 
 ## Known limitations
 
-- **Synonyms and acronyms:** "K8s" doesn't find "Kubernetes", and "CRM" doesn't find "HubSpot". Verification is as literal as the KB.
-- **Questions with no names:** "How much does she earn?" names nothing, so verification can't catch it. Those still depend on the gate and the prompt.
-- **One more LLM call** per question that passes the gate (two in `keyword` and `hybrid`). On a CPU it's little, because the replies are short; with a remote model it's one more network call.
+- **Synonyms and acronyms:** "K8s" doesn't find "Kubernetes", and "CRM" doesn't find "HubSpot". The check is as literal as the CV.
+- **Questions without names:** "How much does she charge?" names nothing, so the check can't catch it. Those depend on the gate and the prompt.
+- **One more LLM call** per question that passes the gate (two in `keyword` and `hybrid`).
+
+---
+
+## FAQ
+
+<details>
+<summary><b>If the CV mentions "Mark" in another context, does the check let it through?</b></summary>
+
+Yes. The check only verifies that the name **appears** in the retrieved chunks, not that it refers to the same thing. If you ask about "the prophet Mark" and "John Mark" appears in a piece, it passes, and the answer will be about that Mark. It's a cheap, literal check, not understanding.
+</details>
+
+<details>
+<summary><b>Would the YES/NO judge work with a big model?</b></summary>
+
+Probably much better: big models judge fairly well. But you'd have to measure it with the eval, like we did here. And the "extract + compare in code" pattern is still cheaper and more repeatable.
+</details>
+
+---
+
+## ✋ Review
+
+**1. Why go from a function to a graph?**
+
+<details><summary>Show answer</summary>
+
+Because the flow now has branches (refuse at the gate, refuse at the check, answer). With a graph, each step is a node tested on its own, and the routing is explicit instead of buried in `if`s.
+</details>
+
+**2. What went wrong with the YES/NO judge?**
+
+<details><summary>Show answer</summary>
+
+When in doubt, `qwen2.5:3b` says NO: it refused answerable questions (Kubernetes, where she works). A small model is a bad judge.
+</details>
+
+**3. What does "the LLM extracts, the code decides" mean?**
+
+<details><summary>Show answer</summary>
+
+Give the model a small, concrete task (pull the name out of the question) and make the decision with deterministic code (is that name in the chunks?). Code doesn't make mistakes or get talked into anything.
+</details>
+
+**4. 🧪 Try it:** `ENGINE=graph make ask DEBUG=1 Q="Has she worked with JavaScript?"`. What do you expect in the debug output?
+
+<details><summary>Show answer</summary>
+
+`named terms in the context: NO → refuse` and the fixed refusal. The extractor pulls "JavaScript", and no chunk contains it as a whole word ("Java" doesn't count).
+</details>
+
+**5. Why does the vector come from the original question and not the rewritten one?**
+
+<details><summary>Show answer</summary>
+
+Because the threshold was calibrated with questions, not keyword lists. If the vector came from the rewrite, the scores would change and 0.42 would stop holding.
+</details>
+
+---
+
+[← Step 6](../06-hybrid-search/README.md) · [Index](../../README.md) · [Next: Step 8, API and web →](../08-api-and-web/README.md)

@@ -2,48 +2,98 @@
 
 🇬🇧 [Read in English](README.md)
 
+Hasta acá probábamos "a mano": tres preguntas, parece que anda. En este paso medimos el chat con **números**, sobre 20 preguntas, y usamos esos números para elegir el umbral. Es lo que separa un experimento de un sistema en el que se puede confiar.
+
 ## Qué vas a aprender
 
 - A medir un RAG con números en lugar de "probé tres preguntas y anduvo".
 - Qué miden **hit@k**, **MRR**, **refusal accuracy** y **answer accuracy**.
-- A calibrar el umbral de relevancia con datos, y por qué el mejor umbral "en los papeles" no es el mejor en la práctica.
-- Qué es **sobreajustar** y por qué estos números son optimistas.
+- A calibrar el umbral con datos, y por qué el mejor umbral "en los papeles" no es el mejor en la práctica.
+- Qué es **sobreajustar** y por qué nuestros números son optimistas.
 
-## El concepto
+---
 
-### Las preguntas
+## Pieza 1: por qué medir
 
-`eval/questions.yaml` tiene 20 preguntas sobre Valentina Ríos, 10 en inglés y 10 en español:
+Un LLM no es determinístico, y cada cambio (el prompt, el umbral, el modelo, cómo se corta el CV) puede arreglar una pregunta y romper otra. Sin una medición:
+
+- no sabés si un cambio mejoró o empeoró;
+- te quedás con la última impresión ("ayer anduvo");
+- no podés comparar dos opciones con argumentos.
+
+Una **eval** es un examen fijo: siempre las mismas preguntas, con lo que se espera de cada una.
+
+## Pieza 2: las preguntas
+
+`eval/questions.yaml` tiene 20 preguntas sobre Valentina, 10 en inglés y 10 en español. Hay cuatro tipos:
 
 | Tipo | Cuántas | Qué se espera |
 |------|--------:|---------------|
-| `answerable` | 7 | Que responda, cite la sección correcta e incluya los datos clave (`must_contain`). |
-| `planted` | 5 | Lo mismo, con datos imposibles de adivinar (por ejemplo, "14 minutes" o "Golden Pigeon"): prueba que la respuesta sale del documento y no de la memoria del modelo. |
+| `answerable` | 7 | Que responda, cite la sección correcta e incluya los datos clave. |
+| `planted` | 5 | Lo mismo, con datos imposibles de adivinar ("14 minutes", "Golden Pigeon"). Prueba que la respuesta sale del documento y no de la memoria del modelo. |
 | `negation` | 1 | Que responda "no", citando la fuente. Ni rechazar ni afirmar. |
 | `unanswerable` | 7 | Que rechace. Incluye fuera de tema, datos privados y prompt injection. |
 
-Tres preguntas están marcadas como **trampas** (JavaScript, CRM y Kubernetes, de los pasos 1 a 4). Fallan a propósito con búsqueda vectorial, así que se reportan aparte y no cuentan para los objetivos. El paso 6 va a mostrar si la búsqueda híbrida las arregla.
+Una pregunta se ve así:
 
-Un test valida el YAML en CI: mínimos por tipo, los dos idiomas, y que cada fuente esperada exista de verdad en los chunks de la KB. Si alguien cambia un título de `kb.example/` y rompe una pregunta, CI lo detecta.
+```yaml
+- id: planted-lumen
+  type: planted
+  lang: en
+  question: How much did Project Lumen speed up reconciliation?
+  expected_sources:
+    - file: experience/northwind-payments.md
+      section: Senior Backend Engineer > Project Lumen
+  expected_answer: From 9 hours to 14 minutes.
+  must_contain: ["14 minutes"]
+```
 
-### Las métricas
+## Pieza 3: las trampas
 
-| Métrica | Pregunta que contesta | Sobre qué preguntas |
-|---------|----------------------|---------------------|
-| **hit@5** | ¿La sección correcta está entre los 5 chunks recuperados? | Las que tienen respuesta. |
-| **MRR** | ¿En qué posición aparece? Vale 1 si es la primera, 0.5 si es la segunda, etc., promediado. | Las que tienen respuesta. |
-| **refusal accuracy** | ¿Rechazó cuando debía, y respondió cuando debía? | Todas. |
-| **answer accuracy** | ¿La respuesta es correcta del todo: no rechaza, dice "no" si es negación, incluye los datos clave, respeta el idioma? | Todas. |
+Tres preguntas están marcadas como **trampas**, las que venimos persiguiendo:
 
-hit@5 y MRR miden **la búsqueda**. Las otras dos miden **el sistema completo**, con el LLM.
+- **JavaScript:** el CV no lo menciona. Lo correcto es rechazar; un "No" es alucinación.
+- **CRM:** el CV dice "HubSpot", nunca "CRM". La búsqueda no lo encuentra.
+- **Kubernetes:** el CV dice que *no* lo usó en producción. Lo correcto es "no", con cita.
 
-### Calibrar el umbral
+Fallan a propósito con búsqueda vectorial, así que se reportan aparte y no cuentan para los objetivos. Los pasos 6 y 7 muestran si se arreglan.
 
-`make eval-sweep` hace **una búsqueda por pregunta, sin LLM**, y prueba todos los umbrales entre 0.35 y 0.65. Para cada uno calcula qué porcentaje de las preguntas sin respuesta rechazaría el corte y qué porcentaje de las preguntas con respuesta dejaría pasar. Tarda 9 segundos.
+Un test valida el YAML en cada push: mínimos por tipo, los dos idiomas, y que cada fuente esperada exista de verdad en los chunks. Si alguien cambia un título del CV y rompe una pregunta, se entera.
+
+## Pieza 4: las métricas de la búsqueda
+
+Dos métricas miden **solo la búsqueda**, sin el LLM, sobre las preguntas que tienen respuesta:
+
+**hit@5:** ¿la sección correcta está entre los 5 chunks recuperados? Es sí o no por pregunta, y se promedia. 1.00 = siempre estuvo.
+
+**MRR** (*Mean Reciprocal Rank*): ¿en qué **posición** apareció?
+
+| Posición del chunk correcto | Vale |
+|---|---:|
+| 1.º | 1 |
+| 2.º | 0.5 |
+| 3.º | 0.33 |
+| no aparece | 0 |
+
+Se promedia. Un MRR de 0.82 quiere decir que el correcto suele estar primero, y a veces segundo.
+
+## Pieza 5: las métricas del sistema completo
+
+Dos métricas miden **todo**, con el LLM, sobre las 20 preguntas:
+
+**refusal accuracy:** ¿rechazó cuando debía, y respondió cuando debía? Un rechazo de más y una respuesta de más cuentan igual como error.
+
+**answer accuracy:** ¿la respuesta es correcta del todo? No rechaza si tenía respuesta, dice "no" si es negación, incluye los datos clave (`must_contain`) y respeta el idioma.
+
+La pareja importa: si la búsqueda anda (hit@5 = 1.00) pero el sistema falla, el problema está después de la búsqueda.
+
+## Pieza 6: calibrar el umbral, primero sin LLM
+
+`make eval-sweep` hace **una búsqueda por pregunta, sin LLM**, y prueba todos los umbrales entre 0.35 y 0.65. Para cada uno calcula cuántas preguntas sin respuesta rechazaría y cuántas con respuesta dejaría pasar. Tarda 9 segundos.
 
 ![Barrido del umbral](../../eval/results/threshold-sweep_bge-m3.png)
 
-Si las dos curvas se cruzaran limpias, habría un umbral perfecto. No se cruzan limpias: hay preguntas con respuesta que puntúan **por debajo** de preguntas sin respuesta.
+Si las dos curvas se separaran limpias, habría un umbral perfecto. No: hay preguntas con respuesta que puntúan **por debajo** de preguntas sin respuesta.
 
 | Pregunta | Top-1 | ¿Tiene respuesta? |
 |----------|------:|:-----------------:|
@@ -53,6 +103,10 @@ Si las dos curvas se cruzaran limpias, habría un umbral perfecto. No se cruzan 
 | How big is the team she leads? | 0.431 | sí |
 | What did she study? | 0.414 | sí |
 
+Ningún número separa los "sí" de los "no".
+
+## Pieza 7: el mejor en los papeles no es el mejor
+
 Mirando solo el corte, el mejor umbral es **0.49**: rechaza todas las preguntas sin respuesta, pero también 3 que sí tenían. Corrimos la eval completa, con el LLM, en los dos candidatos:
 
 | Umbral | refusal accuracy | answer accuracy | hit@5 | MRR |
@@ -60,22 +114,46 @@ Mirando solo el corte, el mejor umbral es **0.49**: rechaza todas las preguntas 
 | 0.49 (el mejor "solo corte") | 0.82 | 0.76 | 1.00 | 0.82 |
 | **0.42** | **0.88** | **0.82** | 1.00 | 0.82 |
 
-**0.42 es mejor**, porque el corte no es el único que rechaza: con 0.42, "¿Cuánto cobra?" y "¿Trabajó con Azure?" pasan el corte y **el LLM las rechaza bien**. Con 0.49, en cambio, el corte rechaza preguntas que el LLM nunca llega a ver. Un rechazo de más no tiene arreglo; una respuesta de más todavía puede rechazarla el LLM.
+**0.42 es mejor,** porque el corte no es el único que rechaza: con 0.42, "¿Cuánto cobra?" y "¿Trabajó con Azure?" pasan el corte, y **el LLM las rechaza bien**. Con 0.49, el corte rechaza preguntas buenas que el LLM nunca llega a ver.
 
-Por eso el barrido solo **propone** candidatos y la eval completa **decide** ([ADR-0009](../../docs/adr/0009-top1-gate-does-not-separate-alone.md)). Quedó `relevance_threshold: 0.42` en `config/models.yaml`.
+> **Un rechazo de más no tiene arreglo; una respuesta de más todavía la puede rechazar el LLM.**
 
-**El objetivo era refusal accuracy ≥ 0.9, y no llegamos: 0.88.** No lo vamos a "arreglar" tocando la KB o el prompt hasta que pase, porque eso sería sobreajustar (ver más abajo). El paso 7 agrega una verificación con el LLM después de la búsqueda.
+Por eso el barrido solo **propone** candidatos y la eval completa **decide** ([ADR-0009](../../docs/adr/0009-top1-gate-does-not-separate-alone.md)). Quedó `relevance_threshold: 0.42`.
 
-## El código
+## Pieza 8: no llegamos al objetivo, y está bien decirlo
+
+El objetivo era refusal accuracy ≥ 0.9. Llegamos a **0.88**.
+
+No lo vamos a "arreglar" tocando el CV o el prompt hasta que pase, porque eso sería hacer trampa con el examen (pieza 9). El paso 7 agrega una verificación después de la búsqueda.
+
+## Pieza 9: el sobreajuste
+
+Calibramos el umbral **con las mismas 20 preguntas** con las que después reportamos los resultados. Eso se llama **sobreajustar** (*overfitting*): elegimos lo que mejor funciona con *estas* preguntas, y nada garantiza que funcione igual con preguntas nuevas.
+
+Es como estudiar con el examen ya resuelto: te va bien en ese examen, no necesariamente en otro.
+
+Con 20 preguntas, mover una sola cambia las métricas un 5%. Por eso 0.88 es un número **optimista**. Lo correcto es separar las preguntas en dos grupos: uno para calibrar y otro, que nunca miraste, para reportar. Con 20 no alcanza para separar; con 100, sí.
+
+## Pieza 10: dónde quedan los resultados
+
+Cada corrida escribe dos archivos en `eval/results/`, y **se commitean**:
+
+```
+eval/results/2026-11-17_pgvector_vector_bge-m3.md     ← para leer
+eval/results/2026-11-17_pgvector_vector_bge-m3.json   ← para comparar con código
+```
+
+El nombre dice fecha, store, modo y modelo. Así queda la historia: qué cambió y cuánto movió los números. Lo crudo (cada respuesta completa) va a `raw/`, que no se commitea.
+
+La eval siempre corre contra el CV de ejemplo, en su propio esquema de Postgres (`eval`), sin importar tu `KB_DIR`: las preguntas son sobre Valentina, no sobre vos.
 
 | Archivo | Qué hace |
 |---------|----------|
-| `src/talk_to_my_cv/evaluation.py` | Métricas, `grade()` (la nota de cada pregunta), `load_questions()`, `run_eval()`, reportes y `sweep()`. |
+| `src/talk_to_my_cv/evaluation.py` | Métricas, `grade()` (la nota de cada pregunta), `run_eval()`, reportes y `sweep()`. |
 | `src/talk_to_my_cv/sweep_plot.py` | El gráfico del barrido. |
-| `eval/questions.yaml` | Las 20 preguntas. Cada trampa está explicada en un comentario. |
-| `eval/results/` | Un resumen `.md` y un `.json` por corrida, que se commitean. Lo crudo va a `raw/`, que no se commitea. |
+| `eval/questions.yaml` | Las 20 preguntas, cada trampa explicada en un comentario. |
 
-La eval siempre corre contra `kb.example/`, en su propio esquema de Postgres (`eval`), sin importar tu `KB_DIR`: las preguntas son sobre Valentina, no sobre vos.
+---
 
 ## Cómo comprobar que anda
 
@@ -89,22 +167,75 @@ make eval MODE=hybrid                # pgvector no lo soporta: sale "skipped"
 
 ### Lo que nos costó
 
-**1. Un bug que solo la eval podía encontrar.** "¿Dónde trabaja actualmente?" fallaba con "no se especifica su lugar de trabajo". El chunk `Senior Backend Engineer` no contiene la palabra "Northwind": la empresa solo está en el título del documento, que iba en la ruta de títulos del **texto embebido** pero no en el texto que recibía el **LLM**. La búsqueda lo encontraba y el LLM no podía leerlo. Ahora el LLM recibe lo mismo que vio el embedding. Ningún test de los pasos anteriores lo habría detectado.
+**1. Un bug que solo la eval podía encontrar.** "¿Dónde trabaja actualmente?" fallaba con "no se especifica su lugar de trabajo". El chunk no contiene la palabra "Northwind": la empresa solo está en el título del documento, que iba en el texto **embebido** pero no en el que recibía el **LLM**. La búsqueda lo encontraba y el LLM no podía leerlo. Ahora el LLM recibe lo mismo que vio el embedding. Ningún test anterior lo habría detectado.
 
-**2. La instrucción de idioma traduce nombres propios.** "¿Dio alguna charla?" respondió con la charla "Tu libro de transacciones es un flujo". El título real es "Your ledger is a stream". Es efecto secundario de la instrucción explícita de idioma del paso 4, y la eval lo marca como incorrecto. **No lo arreglamos acá a propósito**: ajustar el prompt mirando esta pregunta sería sobreajustar.
+**2. La instrucción de idioma traduce nombres propios.** "¿Dio alguna charla?" respondió con la charla "Tu libro de transacciones es un flujo". El título real es "Your ledger is a stream". Es efecto de la instrucción de idioma del paso 4. **No lo arreglamos a propósito**: ajustar el prompt mirando esta pregunta sería sobreajustar.
 
-**3. El evaluador también se equivoca.** Para JavaScript, el modelo respondió "No, the CONTEXT does not mention any experience with JavaScript.". Está mal, porque no es el rechazo fijo, pero nuestra heurística `asserts_no` la clasifica como "alucinación", y no lo es: admite que no sabe. Un evaluador basado en reglas tiene límites; un LLM juez (más adelante) lo haría mejor.
+**3. El evaluador también se equivoca.** Para JavaScript, el modelo respondió "No, the CONTEXT does not mention any experience with JavaScript.". Está mal (no es el rechazo fijo), pero nuestra regla la clasifica como alucinación, y no lo es: admite que no sabe. Un evaluador basado en reglas tiene límites.
 
-**4. Una corrida no alcanza.** Como vimos en el paso 4, Ollama en CPU no es determinístico. Antes de creerle a una diferencia chica entre dos corridas, repetila.
-
-> ### Sobreajuste
->
-> Calibramos el umbral **con las mismas 20 preguntas** con las que después reportamos los resultados. En machine learning eso se llama **sobreajustar** (*overfitting*): elegimos lo que mejor funciona con *estas* preguntas, y nada garantiza que funcione igual con preguntas nuevas. Con 20 preguntas, mover una sola de lugar cambia las métricas un 5%.
->
-> Por eso 0.88 es un número **optimista**. La práctica correcta es separar las preguntas en dos grupos: uno para calibrar y otro, que nunca miraste, para reportar. Con 20 preguntas no alcanza para separar; con 100, sí.
+**4. Una corrida no alcanza.** Ollama en CPU no es determinístico (paso 4). Antes de creerle a una diferencia chica entre dos corridas, repetila.
 
 ## Para jugar
 
-1. **Probá el sobreajuste vos.** Escribí 5 preguntas nuevas sobre Valentina en `eval/questions.yaml`: 3 con respuesta y 2 sin respuesta, sin mirar los scores antes. Corré `make eval-sweep` y `make eval`. ¿Siguen funcionando el umbral y las métricas? ¿El mejor umbral se movió?
-2. **Arreglá la trampa de CRM.** En `kb.example/experience/northwind-payments.md` cambiá "HubSpot" por "HubSpot (CRM)", re-ingestá y corré la eval. `trap-crm` debería pasar. ¿Es trampa arreglarlo? Sí, si lo hacés mirando la pregunta; no, si es una regla general de cómo escribir tu KB ("Herramienta (categoría)").
-3. **Probá con otro modelo.** Cambiá `LLM_MODEL` (por ejemplo, `qwen2.5:7b` si te da la RAM) y compará los resúmenes de `eval/results/`. Si tenés una key de Groq, `LLM_PROVIDER=groq`.
+1. **Probá el sobreajuste vos.** Escribí 5 preguntas nuevas sobre Valentina en `eval/questions.yaml` (3 con respuesta y 2 sin), sin mirar los scores antes. Corré `make eval-sweep` y `make eval`. ¿Se sostienen el umbral y las métricas?
+2. **Arreglá la trampa de CRM.** Cambiá "HubSpot" por "HubSpot (CRM)" en `kb.example/experience/northwind-payments.md`, re-ingestá y corré la eval. ¿Es trampa? Sí, si lo hacés mirando la pregunta; no, si es una regla general para escribir CVs ("Herramienta (categoría)").
+3. **Probá con otro modelo.** Cambiá `LLM_MODEL` (por ejemplo `qwen2.5:7b`, si te da la RAM) y compará los resúmenes de `eval/results/`.
+
+---
+
+## Preguntas frecuentes
+
+<details>
+<summary><b>¿Puedo evaluar con mi propio CV?</b></summary>
+
+Hoy la eval corre siempre sobre el CV de ejemplo, porque las preguntas son sobre Valentina. Para el tuyo, tendrías que escribir tu propio archivo de preguntas (con secciones que existan en tus chunks) y apuntar la eval a tu `kb/`. Es la mejor forma de calibrar el umbral para tu CV.
+</details>
+
+<details>
+<summary><b>¿Por qué no usar otro LLM como juez de las respuestas?</b></summary>
+
+Se puede, y en la industria es común ("LLM-as-judge"). Pero con un modelo de 3B el juez se equivoca mucho (lo medimos en el paso 7). Las reglas fijas (`must_contain`, el rechazo exacto, el idioma) son más limitadas pero repetibles. Con un modelo grande en la nube, un juez valdría la pena.
+</details>
+
+---
+
+## ✋ Repaso
+
+**1. hit@5 = 1.00 y answer accuracy = 0.82. ¿Dónde están los errores?**
+
+<details><summary>Ver respuesta</summary>
+
+Después de la búsqueda: el chunk correcto siempre estuvo entre los 5, así que falla el corte (rechaza de más) o el LLM (responde mal con buen contexto).
+</details>
+
+**2. El chunk correcto aparece segundo en una pregunta y primero en otra. ¿Cuánto da el MRR de esas dos?**
+
+<details><summary>Ver respuesta</summary>
+
+(0.5 + 1) / 2 = 0.75.
+</details>
+
+**3. ¿Por qué ganó 0.42 si el barrido decía que el mejor era 0.49?**
+
+<details><summary>Ver respuesta</summary>
+
+Porque el barrido solo mira el corte, y el LLM también rechaza. Con 0.42 pasan algunas preguntas sin respuesta, pero el LLM las rechaza bien; con 0.49 se pierden preguntas buenas que nadie puede recuperar.
+</details>
+
+**4. ¿Qué es sobreajustar, en una frase?**
+
+<details><summary>Ver respuesta</summary>
+
+Elegir lo que mejor funciona con las mismas preguntas con las que después medís: los números salen optimistas y nada garantiza que se repitan con preguntas nuevas.
+</details>
+
+**5. 🧪 Probalo:** corré `make eval-sweep` y abrí `eval/results/threshold-sweep_bge-m3.png`. ¿Ves algún umbral que separe perfecto?
+
+<details><summary>Ver respuesta</summary>
+
+No: las curvas se superponen. Hay preguntas con respuesta que puntúan menos que preguntas sin respuesta. Ningún umbral solo las separa.
+</details>
+
+---
+
+[← Paso 4](../04-citations-threshold/README.es.md) · [Índice](../../README.es.md) · [Siguiente: Paso 6, búsqueda híbrida →](../06-hybrid-search/README.es.md)

@@ -9,6 +9,13 @@ Before changing architecture, read `docs/adr/`. Terms (chunk, section path, rele
 - Code, identifiers, comments and commit messages are in English (Conventional Commits).
 - `README.md` is in English and links to `README.es.md` at the top. Every lesson has both files, and each links to the other.
 
+## Lesson format
+
+- Lessons teach from the basics, in short "Piece N" sections: one idea each, a concrete example, real terminal output. A term is explained the first time it appears.
+- `lessons/fundamentals/` comes before step 0: concepts only, no code, no tag.
+- Examples use only the fictional persona in `kb.example/`, never the user's real CV.
+- Each lesson ends with an optional FAQ and a "✋ Repaso / Review" section: concept and "🧪 try it" questions, with answers hidden in `<details>`. Then prev · index · next links.
+
 ## Code layout
 
 - One package, `src/talk_to_my_cv/`, grows step by step. `lessons/NN-name/` holds only READMEs (ADR-0002).
@@ -31,7 +38,7 @@ Before changing architecture, read `docs/adr/`. Terms (chunk, section path, rele
 A step closes only in this order:
 
 1. `make check-NN` passes, and its code runs on its own.
-2. Claude drafts `lessons/NN-name/README.es.md` from what was built and what was hard. The draft follows the lesson structure: what you'll learn, the concept (short), the code, how to verify it works, and "para jugar" (an experiment).
+2. Claude drafts `lessons/NN-name/README.es.md` from what was built and what was hard, in the lesson format above: what you'll learn, the pieces, how to verify it works, what was hard, "para jugar" (an experiment), and the review questions.
 3. The user edits and approves the Spanish draft.
 4. Only after that approval, Claude writes `README.md` in English.
 5. Tag `step-NN`. Tags are never moved; fixes go forward.
