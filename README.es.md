@@ -24,10 +24,14 @@ Sources:
   - experience/northwind-payments.md § Senior Backend Engineer > Project Lumen
 
 > ¿Usó Kubernetes?
-No, nunca ha utilizado Kubernetes en producción. [...]
+No, nunca usó Kubernetes en producción. La equipo evaluó EKS en 2022 y eligió ECS para mantener las operaciones simples.
 
 Sources:
   - experience/northwind-payments.md § Senior Backend Engineer > Infrastructure
+  - profile.md § Summary
+  - experience/brightcart.md § Backend Developer
+  - experience/northwind-payments.md § Senior Backend Engineer > Project Lumen
+  - skills.md § Data and messaging
 
 > ¿Sabe cocinar empanadas?
 No tengo esa información.
@@ -36,7 +40,9 @@ No tengo esa información.
 I don't have that information.
 ```
 
-Responde con datos del CV, cita la sección exacta, contesta en el idioma de la pregunta y rechaza lo que no está o lo que intenta engañarlo. Al final también tiene una **API** y una **página web**.
+Responde con datos del CV, cita las secciones que leyó, contesta en el idioma de la pregunta y rechaza lo que no está o lo que intenta engañarlo. Al final también tiene una **API** y una **página web**.
+
+Es una salida real, sin retocar: el "La equipo" es un error de un modelo chico. Y fijate que Kubernetes trae 5 fuentes aunque la respuesta sale de la primera: se cita lo que el LLM **leyó**, no lo que **usó** ([paso 4](lessons/04-citations-threshold/README.es.md)).
 
 ## ¿Para quién es?
 

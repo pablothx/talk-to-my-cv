@@ -24,10 +24,14 @@ Sources:
   - experience/northwind-payments.md § Senior Backend Engineer > Project Lumen
 
 > ¿Usó Kubernetes?
-No, nunca ha utilizado Kubernetes en producción. [...]
+No, nunca usó Kubernetes en producción. La equipo evaluó EKS en 2022 y eligió ECS para mantener las operaciones simples.
 
 Sources:
   - experience/northwind-payments.md § Senior Backend Engineer > Infrastructure
+  - profile.md § Summary
+  - experience/brightcart.md § Backend Developer
+  - experience/northwind-payments.md § Senior Backend Engineer > Project Lumen
+  - skills.md § Data and messaging
 
 > ¿Sabe cocinar empanadas?
 No tengo esa información.
@@ -36,7 +40,9 @@ No tengo esa información.
 I don't have that information.
 ```
 
-It answers with facts from the CV, cites the exact section, replies in the question's language and refuses what isn't there or what tries to trick it. By the end it also has an **API** and a **web page**.
+It answers with facts from the CV, cites the sections it read, replies in the question's language and refuses what isn't there or what tries to trick it. By the end it also has an **API** and a **web page**.
+
+This is real, unedited output: "La equipo" is a small model's grammar slip. And notice Kubernetes brings 5 sources even though the answer comes from the first one: we cite what the LLM **read**, not what it **used** ([step 4](lessons/04-citations-threshold/README.md)).
 
 ## Who is it for?
 
