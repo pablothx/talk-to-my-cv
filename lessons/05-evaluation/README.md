@@ -64,9 +64,9 @@ A test validates the YAML on every push: minimums per type, both languages, and 
 
 Two metrics measure **only the search**, without the LLM, over the answerable questions:
 
-**hit@5:** is the right section among the 5 retrieved chunks? It's yes or no per question, averaged. 1.00 = it was always there.
+**hit@5** (read "hit at five"): a *hit* is a success, and *@5* means "looking at the first 5". It asks: is the right section among the 5 retrieved chunks? It's yes or no per question, averaged. 1.00 = it was always there. With hit@1 the question would be "did it come first?".
 
-**MRR** (*Mean Reciprocal Rank*): in what **position** did it appear?
+**MRR** (*Mean Reciprocal Rank*): the *rank* is the **position** where the right chunk came, *reciprocal* is its inverse (1 divided by the position) and *mean* is the average over all questions. It asks: how high did it come?
 
 | Position of the right chunk | Worth |
 |---|---:|
@@ -76,6 +76,19 @@ Two metrics measure **only the search**, without the LLM, over the answerable qu
 | missing | 0 |
 
 It's averaged. An MRR of 0.82 means the right one is usually first, sometimes second.
+
+An example with three questions:
+
+| Question | Position of the right one | hit@5 | 1 / position |
+|---|---:|:-:|---:|
+| Lumen | 1st | ✅ | 1.00 |
+| Stack | 2nd | ✅ | 0.50 |
+| Talk | 4th | ✅ | 0.25 |
+| **Result** | | **3/3 = 1.00** | **(1 + 0.5 + 0.25) / 3 = 0.58** |
+
+hit@5 says "it always found it"; MRR adds "but not always at the top".
+
+We didn't invent them: they're classic *information retrieval* metrics (the field behind search engines). MRR comes from the TREC question-answering competitions of the late '90s; hit@k is also called *hit rate*, *recall@k* or *top-k accuracy*. RAG frameworks like LlamaIndex ship them out of the box. Only the implementation is ours.
 
 ## Piece 5: the whole-system metrics
 

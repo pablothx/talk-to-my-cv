@@ -64,9 +64,9 @@ Un test valida el YAML en cada push: mínimos por tipo, los dos idiomas, y que c
 
 Dos métricas miden **solo la búsqueda**, sin el LLM, sobre las preguntas que tienen respuesta:
 
-**hit@5:** ¿la sección correcta está entre los 5 chunks recuperados? Es sí o no por pregunta, y se promedia. 1.00 = siempre estuvo.
+**hit@5** (se lee "hit at five"): *hit* es "acierto" y *@5* es "mirando los primeros 5". Pregunta: ¿la sección correcta está entre los 5 chunks recuperados? Es sí o no por pregunta, y se promedia. 1.00 = siempre estuvo. Con hit@1 la pregunta sería "¿vino primero?".
 
-**MRR** (*Mean Reciprocal Rank*): ¿en qué **posición** apareció?
+**MRR** (*Mean Reciprocal Rank*, "rango recíproco promedio"): *rank* es el **puesto** en que vino el chunk correcto, *reciprocal* es el inverso (1 dividido el puesto) y *mean* es el promedio de todas las preguntas. Pregunta: ¿qué tan arriba vino?
 
 | Posición del chunk correcto | Vale |
 |---|---:|
@@ -76,6 +76,19 @@ Dos métricas miden **solo la búsqueda**, sin el LLM, sobre las preguntas que t
 | no aparece | 0 |
 
 Se promedia. Un MRR de 0.82 quiere decir que el correcto suele estar primero, y a veces segundo.
+
+Un ejemplo con tres preguntas:
+
+| Pregunta | Puesto del correcto | hit@5 | 1 / puesto |
+|---|---:|:-:|---:|
+| Lumen | 1.º | ✅ | 1.00 |
+| Stack | 2.º | ✅ | 0.50 |
+| Charla | 4.º | ✅ | 0.25 |
+| **Resultado** | | **3/3 = 1.00** | **(1 + 0.5 + 0.25) / 3 = 0.58** |
+
+hit@5 dice "lo encontró siempre"; MRR agrega "pero no siempre arriba".
+
+No son inventos nuestros: son métricas clásicas de *information retrieval* (la disciplina de los buscadores). MRR viene de las competencias TREC de búsqueda de respuestas, de fines de los 90; hit@k también se llama *hit rate*, *recall@k* o *top-k accuracy*. Frameworks de RAG como LlamaIndex las traen de fábrica. Lo nuestro es solo la implementación.
 
 ## Pieza 5: las métricas del sistema completo
 
