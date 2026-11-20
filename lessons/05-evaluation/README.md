@@ -92,7 +92,7 @@ We didn't invent them: they're classic *information retrieval* metrics (the fiel
 
 ## Piece 5: the whole-system metrics
 
-Two metrics measure **everything**, with the LLM, over all 20 questions:
+Two metrics measure **everything**, with the LLM, over the 17 questions that aren't traps (the 3 traps are reported apart):
 
 **refusal accuracy:** did it refuse when it should, and answer when it should? An extra refusal and an extra answer both count as errors.
 

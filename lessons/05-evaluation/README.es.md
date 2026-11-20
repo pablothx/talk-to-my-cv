@@ -92,7 +92,7 @@ No son inventos nuestros: son métricas clásicas de *information retrieval* (la
 
 ## Pieza 5: las métricas del sistema completo
 
-Dos métricas miden **todo**, con el LLM, sobre las 20 preguntas:
+Dos métricas miden **todo**, con el LLM, sobre las 17 preguntas que no son trampa (las 3 trampas se reportan aparte):
 
 **refusal accuracy:** ¿rechazó cuando debía, y respondió cuando debía? Un rechazo de más y una respuesta de más cuentan igual como error.
 
