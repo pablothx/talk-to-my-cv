@@ -12,7 +12,7 @@ El chat ya responde. Ahora hacemos dos cosas: que cada respuesta diga **de dónd
 
 ---
 
-## Pieza 1: citas que no inventa el LLM
+## Pieza 1 de 6: citas que no inventa el LLM
 
 Podríamos pedirle al LLM que cite sus fuentes. Pero un modelo de 3B inventa o deforma las etiquetas con facilidad.
 
@@ -27,7 +27,7 @@ Sources:
 
 Si el LLM rechaza, no hay citas: no tiene sentido mostrar fuentes de un "no tengo esa información".
 
-## Pieza 2: el corte
+## Pieza 2 de 6: el corte
 
 ```
 pregunta ──► búsqueda ──► ¿el top-1 llega al umbral?
@@ -41,7 +41,7 @@ pregunta ──► búsqueda ──► ¿el top-1 llega al umbral?
 - Si **ningún** chunk llega al umbral → rechazo fijo, y el LLM **no se llama**.
 - Si alguno llega → **solo los que llegan** van al LLM. Los demás se descartan.
 
-## Pieza 3: por qué rechazar antes del LLM
+## Pieza 3 de 6: por qué rechazar antes del LLM
 
 Rechazar sin llamar al LLM tiene tres ventajas ([ADR-0006](../../docs/adr/0006-relevance-gate-before-llm.md)):
 
@@ -49,7 +49,7 @@ Rechazar sin llamar al LLM tiene tres ventajas ([ADR-0006](../../docs/adr/0006-r
 2. es **gratis**: no hay que esperar 10 segundos de CPU (ni pagar tokens en la nube);
 3. **no se puede convencer** con un prompt ingenioso. Un "ignorá tus reglas" no pasa el corte porque no se parece a nada del CV.
 
-## Pieza 4: dónde vive el umbral
+## Pieza 4 de 6: dónde vive el umbral
 
 El umbral está en `config/models.yaml`, **uno por modelo de embeddings**, porque cada modelo tiene su propio rango de scores (paso 1):
 
@@ -70,7 +70,7 @@ RELEVANCE_THRESHOLD=0.5 make ask Q="..."
 
 O fijo para vos, con una línea `RELEVANCE_THRESHOLD=0.40` en tu `.env`.
 
-## Pieza 5: ¿en qué idioma rechazar sin LLM?
+## Pieza 5 de 6: ¿en qué idioma rechazar sin LLM?
 
 Si no llamamos al LLM, nadie sabe en qué idioma vino la pregunta. `detect_language()` (en `language.py`) es un detector chiquito:
 
@@ -83,7 +83,7 @@ Si no está seguro (por ejemplo, con "Kubernetes?"), el rechazo sale en los dos 
 No tengo esa información. / I don't have that information.
 ```
 
-## Pieza 6: `DEBUG=1` ahora muestra el corte
+## Pieza 6 de 6: `DEBUG=1` ahora muestra el corte
 
 ```bash
 make ask DEBUG=1 Q="¿Usó Kubernetes?"

@@ -81,11 +81,35 @@ git clone https://github.com/pablothx/talk-to-my-cv && cd talk-to-my-cv
 cp .env.example .env
 ollama pull bge-m3 && ollama pull qwen2.5:3b
 make install
-make up          # levanta la base de datos
+make up          # levanta las bases (Postgres y OpenSearch)
 make doctor      # revisa que todo esté en su lugar
 make ingest      # carga el CV de ejemplo
 make chat        # ¡a preguntar!
 ```
+
+## Todo el stack en 20 minutos
+
+¿Querés ver todo funcionando antes de entrar en los detalles? Después del arranque de arriba, este recorrido pasa por cada pieza del proyecto. Son unos 20 minutos en total, sin contar la descarga de los modelos (~3 GB, una sola vez).
+
+```bash
+# 1. Búsqueda por significado, con el corte a la vista (pasos 1 a 4) ............. ~1 min
+make ask DEBUG=1 Q="¿Usó Kubernetes?"
+
+# 2. Medirlo con 20 preguntas (paso 5) .......................................... ~2 min
+make eval
+
+# 3. Búsqueda híbrida con OpenSearch (paso 6) ................................... ~2 min
+VECTOR_STORE=opensearch make ingest
+VECTOR_STORE=opensearch SEARCH_MODE=hybrid make ask DEBUG=1 Q="How big is the team she leads?"
+
+# 4. El grafo, que verifica antes de responder (paso 7) ......................... ~1 min
+ENGINE=graph make ask DEBUG=1 Q="Has she worked with JavaScript?"
+
+# 5. La API y la página web, en un contenedor (paso 8) .......................... ~3 min
+make api-up      # abrí http://localhost:8000
+```
+
+Cada comando corresponde a una lección: si algo te llama la atención, el [camino](#el-camino) de arriba te lleva a los detalles.
 
 ¿Primera vez con IA? Empezá por los [**fundamentos**](lessons/fundamentals/README.es.md): 30 minutos, sin código.
 

@@ -13,7 +13,7 @@ El chat todavía cae en la trampa de JavaScript: responde "No" con citas, cuando
 
 ---
 
-## Pieza 1: de una función a un grafo
+## Pieza 1 de 7: de una función a un grafo
 
 Hasta el paso 6, `answer()` era una función de arriba hacia abajo: buscar, cortar, preguntarle al LLM. Cada paso nuevo (reformular, verificar) agregaría un `if`, y la función se volvería difícil de leer y de testear.
 
@@ -32,7 +32,7 @@ LangGraph lo escribe como un **grafo**:
 
 ¿Por qué LangGraph recién ahora? Porque hasta acá el flujo era una línea recta y no hacía falta ([ADR-0003](../../docs/adr/0003-own-seams-no-langchain-before-step-7.md)). Ahora hay ramas.
 
-## Pieza 2: la verificación que no anduvo
+## Pieza 2 de 7: la verificación que no anduvo
 
 El paso 5 pidió una verificación después de la búsqueda. La idea obvia es preguntarle al LLM: "¿este CONTEXTO responde la PREGUNTA? Contestá SÍ o NO".
 
@@ -49,7 +49,7 @@ La probamos con `qwen2.5:3b` en 6 preguntas con respuesta conocida, con tres pro
 
 Ante la duda, el modelo dice que NO. Como verificador, rechazaría preguntas que sí tienen respuesta. **Un modelo de 3B es mal juez.**
 
-## Pieza 3: el LLM extrae
+## Pieza 3 de 7: el LLM extrae
 
 El mismo modelo sí es bueno para una tarea más chica: **extraer** el nombre concreto por el que se pregunta.
 
@@ -63,7 +63,7 @@ El mismo modelo sí es bueno para una tarea más chica: **extraer** el nombre co
 
 `NONE` quiere decir "esta pregunta no nombra nada específico".
 
-## Pieza 4: el código decide
+## Pieza 4 de 7: el código decide
 
 Después, **el código** se fija si ese nombre aparece en los chunks que pasaron el corte:
 
@@ -82,7 +82,7 @@ Es la señal que encontramos en el paso 6 ("ninguna palabra de la pregunta está
 
 > **El patrón:** no le pidas a un modelo chico que juzgue. Pedile que extraiga algo concreto, y hacé la comparación con código, que no se equivoca ni se deja convencer.
 
-## Pieza 5: cuando el extractor responde cualquier cosa
+## Pieza 5 de 7: cuando el extractor responde cualquier cosa
 
 Un modelo chico a veces no responde lo pedido: escribe una oración, explica, o lista categorías ("technologies"). El código (`parse_terms()`) se protege:
 
@@ -91,13 +91,13 @@ Un modelo chico a veces no responde lo pedido: escribe una oración, explica, o 
 
 Ante la duda, **no rechaza**: deja que siga el flujo normal. Es mejor perder una verificación que rechazar una pregunta buena.
 
-## Pieza 6: reformular para la búsqueda por palabras
+## Pieza 6 de 7: reformular para la búsqueda por palabras
 
 BM25 no traduce: "¿Qué idiomas habla?" no comparte palabras con "Spanish, English, Esperanto". En los modos `keyword` e `hybrid`, el grafo primero le pide al LLM que reescriba la pregunta como palabras clave en inglés, y esa es la consulta de BM25.
 
 El **vector** sigue saliendo de la pregunta original. Así el umbral sigue valiendo, porque se calibró con preguntas, no con palabras clave. En modo `vector` no hay nada que reformular y el nodo no corre.
 
-## Pieza 7: mismo contrato, otro motor
+## Pieza 7 de 7: mismo contrato, otro motor
 
 Ahora hay dos **motores** (*engines*), dos formas de convertir una pregunta en respuesta:
 

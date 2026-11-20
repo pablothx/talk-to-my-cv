@@ -13,7 +13,7 @@ Before writing a single line of RAG, we get the machine ready and check with one
 
 ---
 
-## Piece 1: the three pieces of a RAG
+## Piece 1 of 8: the three pieces of a RAG
 
 A RAG needs three things:
 
@@ -23,7 +23,7 @@ A RAG needs three things:
 
 Both models run in **Ollama**, a program that serves models on your machine. The code talks to it over HTTP, like any other API.
 
-## Piece 2: what runs where
+## Piece 2 of 8: what runs where
 
 ```
 your machine
@@ -37,7 +37,7 @@ your machine
 
 Everything is free and local: no API keys, no accounts.
 
-## Piece 3: the tools
+## Piece 3 of 8: the tools
 
 | Tool | What it is | What we use it for |
 |---|---|---|
@@ -48,7 +48,7 @@ Everything is free and local: no API keys, no accounts.
 
 Every `make something` is a shortcut: to see what it does, open the `Makefile`. `make help` lists them all.
 
-## Piece 4: the setup files
+## Piece 4 of 8: the setup files
 
 | File | What it's for |
 |------|---------------|
@@ -61,7 +61,7 @@ Every `make something` is a shortcut: to see what it does, open the `Makefile`. 
 | `.pre-commit-config.yaml` | On every commit: **gitleaks** (stops you if a key slips in) and **ruff** (code style). |
 | `.github/workflows/ci.yml` | On every push, GitHub runs the linter and the unit tests. |
 
-## Piece 5: the `.env`
+## Piece 5 of 8: the `.env`
 
 All configuration lives in a `.env` file, which **is never committed**. The most important ones:
 
@@ -75,7 +75,7 @@ KB_DIR=kb.example        # where the CV comes from: the example, or `kb` for you
 
 If you set an invalid value (for example `LLM_PROVIDER=chatgpt`), `config.py` fails at startup with a message naming the wrong variable. Better to fail at the start than halfway through.
 
-## Piece 6: `make doctor`
+## Piece 6 of 8: `make doctor`
 
 Before you start, `make doctor` checks everything and tells you what's missing:
 
@@ -90,7 +90,7 @@ Before you start, `make doctor` checks everything and tells you what's missing:
 
 If something fails, it gives you **a concrete hint** ("run `ollama pull bge-m3`"). And if Ollama is down, it doesn't also say "the model is missing": it skips those checks and gives you one useful hint.
 
-## Piece 7: two design ideas you'll see throughout the tutorial
+## Piece 7 of 8: two design ideas you'll see throughout the tutorial
 
 **1. Configuration takes the environment as a parameter.** `load_settings(env={...})` in tests and `load_settings()` in real life. That way we test defaults and errors without touching global variables:
 
@@ -104,7 +104,7 @@ def test_groq_without_api_key_fails_pointing_to_the_variable():
 
 Both are the same idea: **inject what comes from outside**, so you can test the logic with fake pieces. You'll see it in every step.
 
-## Piece 8: two levels of tests
+## Piece 8 of 8: two levels of tests
 
 - **Unit tests** (`make test`): use fake pieces, run in milliseconds and are the only ones that run on GitHub.
 - **End-to-end tests** (`make test-e2e`): talk to the real Ollama and Postgres. They never compare an answer's exact text, because an LLM doesn't always say the same thing ([ADR-0008](../../docs/adr/0008-tests-against-nondeterministic-llms.md)).

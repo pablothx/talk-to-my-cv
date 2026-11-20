@@ -13,7 +13,7 @@ The CV is already cut and stored. Now we add the LLM: we search for the pieces, 
 
 ---
 
-## Piece 1: the full cycle
+## Piece 1 of 7: the full cycle
 
 ```
 question ──► embedding ──► search (top 5) ──► prompt with context ──► LLM ──► answer
@@ -29,7 +29,7 @@ make ask Q="How much did Project Lumen speed up reconciliation?"
 
 The LLM doesn't "know" anything about the CV: **it only sees the 5 chunks the search returned**. Everything it says must come from there.
 
-## Piece 2: the first question when something goes wrong
+## Piece 2 of 7: the first question when something goes wrong
 
 When an answer is wrong, the first question is always: **what context did the LLM get?** Often the LLM did its job well with a bad context.
 
@@ -49,7 +49,7 @@ make ask DEBUG=1 Q="What is her tech stack?"
 
 You see each retrieved chunk with its score. If the chunk with the answer isn't there, the problem is search, not the LLM.
 
-## Piece 3: the prompt, in two messages
+## Piece 3 of 7: the prompt, in two messages
 
 A chat LLM receives **messages with roles**:
 
@@ -58,7 +58,7 @@ A chat LLM receives **messages with roles**:
 
 We keep them **separate**: the question is never mixed into the rules. If someone writes "ignore your rules", it's clear that came from the user and not from the system. It isn't a perfect defense, but it helps.
 
-## Piece 4: the rules
+## Piece 4 of 7: the rules
 
 The `system` message (in `src/talk_to_my_cv/rag.py`) says, in short:
 
@@ -80,13 +80,13 @@ Led Project Lumen, a ledger reconciliation engine written in Java 21...
 
 In this step the labels only help the LLM find its way. In step 4 they become citations.
 
-## Piece 5: why an "exact" refusal
+## Piece 5 of 7: why an "exact" refusal
 
 We ask for the refusal to be **exactly** one of two sentences. Why so strict? So the code can recognize it (`is_refusal()`) and treat it differently: no citations, counted in the evaluation, shown differently on a web page.
 
 "Sorry, I couldn't find anything about that in the CV 😊" is friendly, but the code can't tell it apart from an answer.
 
-## Piece 6: the `ChatModel` and the providers
+## Piece 6 of 7: the `ChatModel` and the providers
 
 As with embeddings, the code doesn't call Ollama directly, but an interface of ours:
 
@@ -106,7 +106,7 @@ Both use `temperature=0` (always pick the most likely word, no creativity) and a
 
 > **Careful with Groq:** your CV's chunks leave your machine. With the example CV it doesn't matter; with yours, decide consciously.
 
-## Piece 7: `make chat` and `make ask`
+## Piece 7 of 7: `make chat` and `make ask`
 
 | Command | What it does |
 |---|---|

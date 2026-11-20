@@ -12,7 +12,7 @@ Hasta acá el chat vivía en la terminal. En este paso lo convertimos en una **A
 
 ---
 
-## Pieza 1: la API en una línea
+## Pieza 1 de 7: la API en una línea
 
 ```bash
 make serve
@@ -33,7 +33,7 @@ curl -s localhost:8000/api/ask -H 'content-type: application/json' \
 
 Y si abrís http://localhost:8000 en el navegador, hay una página con un formulario.
 
-## Pieza 2: los endpoints
+## Pieza 2 de 7: los endpoints
 
 | Ruta | Qué hace |
 |---|---|
@@ -44,7 +44,7 @@ Y si abrís http://localhost:8000 en el navegador, hay una página con un formul
 
 La API valida la pregunta **antes** de llamar a cualquier modelo: vacía o con más de 500 caracteres devuelve **422** (error de validación). Un rechazo es una respuesta normal (**200**, `"refused": true`), no un error.
 
-## Pieza 3: inyectar la función, no los modelos
+## Pieza 3 de 7: inyectar la función, no los modelos
 
 La API no sabe nada de embeddings, stores ni LLMs. Recibe **una sola función**:
 
@@ -57,7 +57,7 @@ create_app(ask)  # ask: pregunta → Answer
 
 Así los tests de la API corren en milisegundos y en GitHub, sin Ollama. Es la misma idea del paso 0: **inyectar lo que viene de afuera**.
 
-## Pieza 4: un riesgo nuevo, XSS
+## Pieza 4 de 7: un riesgo nuevo, XSS
 
 En el paso 3 vimos la prompt injection: alguien escribe instrucciones para el modelo en la pregunta. Ahora hay un riesgo nuevo.
 
@@ -67,7 +67,7 @@ Y es peor: la página muestra la pregunta otra vez, así que ni siquiera hace fa
 
 > **La respuesta de un LLM es entrada no confiable**, igual que lo que escribe un usuario.
 
-## Pieza 5: dos defensas
+## Pieza 5 de 7: dos defensas
 
 Cada una alcanza sola, y tenemos las dos:
 
@@ -76,7 +76,7 @@ Cada una alcanza sola, y tenemos las dos:
 
 Sin JavaScript, el formulario hace un POST común y el servidor devuelve la página con la respuesta. Es menos lindo que un chat que escribe palabra por palabra, pero no hay nada que inyectar.
 
-## Pieza 6: la API en un contenedor
+## Pieza 6 de 7: la API en un contenedor
 
 Hasta acá todo el Python corría en tu máquina. La API es el primer contenedor de la app:
 
@@ -89,7 +89,7 @@ make api-down
 - `.dockerignore` es una **lista de lo permitido**: solo entra el código, la configuración y las dependencias. **`.env` y `kb/` (tus datos reales) nunca entran a la imagen.**
 - Adentro de Docker, la API le habla a Postgres y OpenSearch por nombre de servicio (`postgres`, `opensearch`), y a Ollama, que corre en tu máquina, por `host.docker.internal`.
 
-## Pieza 7: el problema de Linux
+## Pieza 7 de 7: el problema de Linux
 
 En macOS y Windows (Docker Desktop), `host.docker.internal` anda solo. **En Linux, no:** apunta a la IP de la red de Docker (172.17.0.1), y Ollama escucha solo en `127.0.0.1`. La conexión se rechaza.
 

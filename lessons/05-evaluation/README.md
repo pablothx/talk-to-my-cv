@@ -13,7 +13,7 @@ Until now we tested "by hand": three questions, looks like it works. In this ste
 
 ---
 
-## Piece 1: why measure
+## Piece 1 of 10: why measure
 
 An LLM isn't deterministic, and every change (the prompt, the threshold, the model, how the CV is cut) can fix one question and break another. Without a measurement:
 
@@ -23,7 +23,7 @@ An LLM isn't deterministic, and every change (the prompt, the threshold, the mod
 
 An **eval** is a fixed exam: always the same questions, with what's expected from each one.
 
-## Piece 2: the questions
+## Piece 2 of 10: the questions
 
 `eval/questions.yaml` has 20 questions about Valentina, 10 in English and 10 in Spanish. There are four types:
 
@@ -65,7 +65,7 @@ What each field is:
 
 Why `must_contain` and not compare against `expected_answer`? Because the LLM words it differently every time: "from 9 hours to 14 minutes" and "cut it to 14 minutes" are both right. Comparing the whole text would always fail. We only require the facts that can't be guessed.
 
-## Piece 3: the traps
+## Piece 3 of 10: the traps
 
 Three questions are marked as **traps**, the ones we've been chasing:
 
@@ -77,7 +77,7 @@ They fail on purpose with vector search, so they're reported apart and don't cou
 
 A test validates the YAML on every push: minimums per type, both languages, and that every expected source really exists in the chunks. If someone changes a CV heading and breaks a question, they find out.
 
-## Piece 4: the search metrics
+## Piece 4 of 10: the search metrics
 
 Two metrics measure **only the search**, without the LLM, over the answerable questions:
 
@@ -107,7 +107,7 @@ hit@5 says "it always found it"; MRR adds "but not always at the top".
 
 We didn't invent them: they're classic *information retrieval* metrics (the field behind search engines). MRR comes from the TREC question-answering competitions of the late '90s; hit@k is also called *hit rate*, *recall@k* or *top-k accuracy*. RAG frameworks like LlamaIndex ship them out of the box. Only the implementation is ours.
 
-## Piece 5: the whole-system metrics
+## Piece 5 of 10: the whole-system metrics
 
 Two metrics measure **everything**, with the LLM, over the 17 questions that aren't traps (the 3 traps are reported apart):
 
@@ -117,7 +117,7 @@ Two metrics measure **everything**, with the LLM, over the 17 questions that are
 
 The pair matters: if search works (hit@5 = 1.00) but the system fails, the problem is after the search.
 
-## Piece 6: calibrating the threshold, first without the LLM
+## Piece 6 of 10: calibrating the threshold, first without the LLM
 
 `make eval-sweep` does **one search per question, without the LLM**, and tries every threshold between 0.35 and 0.65. For each one it computes how many unanswerable questions it would refuse and how many answerable ones it would let through. It takes 9 seconds.
 
@@ -135,7 +135,7 @@ If the two curves separated cleanly, there would be a perfect threshold. They do
 
 No number separates the "yes" from the "no".
 
-## Piece 7: the best on paper isn't the best
+## Piece 7 of 10: the best on paper isn't the best
 
 Looking only at the gate, the best threshold is **0.49**: it refuses every unanswerable question, but also 3 that had an answer. We ran the full eval, with the LLM, on both candidates:
 
@@ -150,13 +150,13 @@ Looking only at the gate, the best threshold is **0.49**: it refuses every unans
 
 That's why the sweep only **proposes** candidates and the full eval **decides** ([ADR-0009](../../docs/adr/0009-top1-gate-does-not-separate-alone.md)). We kept `relevance_threshold: 0.42`.
 
-## Piece 8: we missed the target, and it's fine to say so
+## Piece 8 of 10: we missed the target, and it's fine to say so
 
 The target was refusal accuracy ≥ 0.9. We got **0.88**.
 
 We won't "fix" it by tweaking the CV or the prompt until it passes, because that would be cheating on the exam (piece 9). Step 7 adds a check after the search.
 
-## Piece 9: overfitting
+## Piece 9 of 10: overfitting
 
 We calibrated the threshold **with the same 20 questions** we then report results on. That's called **overfitting**: we chose what works best on *these* questions, and nothing guarantees it works the same on new ones.
 
@@ -172,7 +172,7 @@ Three nuances:
 - **The risk grows with every knob.** Here we tuned just one (the threshold). If you also tune the prompt, `k`, the hybrid weights and the chunk size while looking at the same questions, each one adds a bit of "target drawn afterwards".
 - **Not even 500 questions about Valentina calibrate your CV.** Another document has another style and other scores. Calibrating yours takes questions about your CV, and today the eval always runs on the example one (see the FAQ "Can I evaluate with my own CV?"). Meanwhile, try values by hand with `RELEVANCE_THRESHOLD`.
 
-## Piece 10: where results go
+## Piece 10 of 10: where results go
 
 Every run writes two files to `eval/results/`, and **they're committed**:
 

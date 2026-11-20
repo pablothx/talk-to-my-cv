@@ -13,7 +13,7 @@ Ya tenemos el CV cortado y guardado. Ahora sumamos el LLM: buscamos los pedazos,
 
 ---
 
-## Pieza 1: el ciclo completo
+## Pieza 1 de 7: el ciclo completo
 
 ```
 pregunta ──► embedding ──► búsqueda (top 5) ──► prompt con contexto ──► LLM ──► respuesta
@@ -29,7 +29,7 @@ make ask Q="How much did Project Lumen speed up reconciliation?"
 
 El LLM no "sabe" nada del CV: **solo ve los 5 chunks que trajo la búsqueda**. Todo lo que diga tiene que salir de ahí.
 
-## Pieza 2: la primera pregunta cuando algo sale mal
+## Pieza 2 de 7: la primera pregunta cuando algo sale mal
 
 Cuando una respuesta está mal, la primera pregunta siempre es: **¿qué contexto recibió el LLM?** Muchas veces el LLM hizo bien su trabajo con un contexto malo.
 
@@ -49,7 +49,7 @@ make ask DEBUG=1 Q="What is her tech stack?"
 
 Ves cada chunk recuperado con su score. Si el chunk con la respuesta no está ahí, el problema es la búsqueda, no el LLM.
 
-## Pieza 3: el prompt, en dos mensajes
+## Pieza 3 de 7: el prompt, en dos mensajes
 
 A un LLM de chat se le mandan **mensajes con roles**:
 
@@ -58,7 +58,7 @@ A un LLM de chat se le mandan **mensajes con roles**:
 
 Los mantenemos **separados**: la pregunta nunca se mezcla con las reglas. Si alguien escribe "ignorá tus reglas", queda claro que eso viene del usuario y no del sistema. No es una defensa perfecta, pero ayuda.
 
-## Pieza 4: las reglas
+## Pieza 4 de 7: las reglas
 
 El mensaje `system` (en `src/talk_to_my_cv/rag.py`) dice, en resumen:
 
@@ -80,13 +80,13 @@ Led Project Lumen, a ledger reconciliation engine written in Java 21...
 
 En este paso las etiquetas solo ayudan al LLM a ubicarse. En el paso 4 se convierten en citas.
 
-## Pieza 5: por qué un rechazo "exacto"
+## Pieza 5 de 7: por qué un rechazo "exacto"
 
 Pedimos que el rechazo sea **exactamente** una de dos frases. ¿Por qué tan estricto? Porque así el código puede reconocerlo (`is_refusal()`) y tratarlo distinto: no mostrar citas, contarlo en la evaluación, o mostrarlo de otra forma en una página web.
 
 Un "Lo siento, no encontré nada sobre eso en el CV 😊" es amable, pero el código no lo puede distinguir de una respuesta.
 
-## Pieza 6: el `ChatModel` y los proveedores
+## Pieza 6 de 7: el `ChatModel` y los proveedores
 
 Igual que con los embeddings, el código no llama a Ollama directo, sino a una interfaz propia:
 
@@ -106,7 +106,7 @@ Las dos usan `temperature=0` (que elija siempre la palabra más probable, sin cr
 
 > **Ojo con Groq:** los chunks de tu CV salen de tu máquina. Con el CV de ejemplo da igual; con el tuyo, decidilo a conciencia.
 
-## Pieza 7: `make chat` y `make ask`
+## Pieza 7 de 7: `make chat` y `make ask`
 
 | Comando | Qué hace |
 |---|---|

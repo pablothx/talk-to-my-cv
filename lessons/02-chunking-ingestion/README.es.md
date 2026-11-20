@@ -14,11 +14,11 @@ En este paso convertimos el CV en filas de una base de datos: cada fila es un pe
 
 ---
 
-## Pieza 1: por qué cortar
+## Pieza 1 de 10: por qué cortar
 
 Si embebés un CV entero en un solo vector, ese vector habla "de todo un poco" y no se parece mucho a ninguna pregunta concreta. Por eso cortamos el documento en pedazos chicos, cada uno con un tema claro, y embebemos cada uno.
 
-## Pieza 2: el CV de ejemplo
+## Pieza 2 de 10: el CV de ejemplo
 
 `kb.example/` es el CV de **Valentina Ríos**, una persona ficticia. Son 6 archivos Markdown:
 
@@ -35,7 +35,7 @@ kb.example/
 
 Tiene **datos plantados**: cosas imposibles de adivinar, como que Project Lumen bajó la conciliación "de 9 horas a 14 minutos". Si el chat responde eso, sabemos que lo leyó del documento y no lo inventó. También tiene **trampas** para la evaluación (paso 5).
 
-## Pieza 3: cómo cortamos
+## Pieza 3 de 10: cómo cortamos
 
 Cortamos **por títulos de Markdown**, que es como una persona ya organizó su CV:
 
@@ -45,7 +45,7 @@ Cortamos **por títulos de Markdown**, que es como una persona ya organizó su C
 
 Cada línea del documento cae en algún chunk: no se pierde nada. El CV de Valentina queda en **19 chunks**.
 
-## Pieza 4: el frontmatter
+## Pieza 4 de 10: el frontmatter
 
 Cada archivo empieza con un bloque de datos, el *frontmatter*:
 
@@ -63,7 +63,7 @@ tags: [java, aws, kafka, payments]
 
 Se copia como `metadata` a cada chunk del archivo. El `title` se usa en la ruta de títulos (pieza 6). El resto se guarda pero **hoy no se usa** para buscar: queda listo para filtrar en el futuro (por ejemplo, "solo experiencia" o "solo esta persona"), sin tener que volver a ingestar.
 
-## Pieza 5: la tabla
+## Pieza 5 de 10: la tabla
 
 Cada chunk es una fila de la tabla `chunks` en Postgres:
 
@@ -89,7 +89,7 @@ docker compose exec postgres psql -U postgres -d talk_to_my_cv
 select file, section from chunks;
 ```
 
-## Pieza 6: por qué `embed_text` lleva los títulos adelante
+## Pieza 6 de 10: por qué `embed_text` lleva los títulos adelante
 
 El chunk de Project Lumen dice *"Led Project Lumen, a ledger reconciliation engine..."*. En ninguna parte dice **Northwind Payments**: eso está en el título del archivo.
 
@@ -103,7 +103,7 @@ Led Project Lumen, a ledger reconciliation engine...
 
 Y el LLM recibe **lo mismo**: si la búsqueda encontró el chunk gracias a "Northwind", el LLM tiene que poder leer "Northwind". Esto lo aprendimos a la fuerza en el paso 5.
 
-## Pieza 7: la ingesta idempotente
+## Pieza 7 de 10: la ingesta idempotente
 
 Embeber es lo caro. No queremos re-embeber todo cada vez que cambia una coma. Cada chunk tiene dos huellas:
 
@@ -124,7 +124,7 @@ kb.example: 19 added, 0 updated, 0 unchanged, 0 deleted      ← la primera vez
 kb.example: 0 added, 0 updated, 19 unchanged, 0 deleted      ← la segunda
 ```
 
-## Pieza 8: el candado del modelo
+## Pieza 8 de 10: el candado del modelo
 
 La base guarda con qué modelo se armó, en otra tabla, `kb_meta`:
 
@@ -143,7 +143,7 @@ different models can't be compared: run `make ingest REBUILD=1` to start over.
 
 Mezclar vectores de dos modelos daría búsquedas que **parecen andar pero devuelven basura**. Es mejor un error ruidoso que un error silencioso ([ADR-0005](../../docs/adr/0005-chunk-identity-and-embedding-model-lock.md)).
 
-## Pieza 9: tu CV en PDF
+## Pieza 9 de 10: tu CV en PDF
 
 Si ponés un PDF en `kb/`, la ingesta lo convierte a Markdown **en memoria**, con reglas fijas y **sin LLM** (así no puede inventar nada):
 
@@ -153,7 +153,7 @@ Si ponés un PDF en `kb/`, la ingesta lo convierte a Markdown **en memoria**, co
 
 Los archivos dentro de carpetas que empiezan con `_` (como `kb/_drafts/`) se ignoran.
 
-## Pieza 10: los stores y los tests de contrato
+## Pieza 10 de 10: los stores y los tests de contrato
 
 El código no habla con Postgres directo, sino con una interfaz, `VectorStore` (`upsert`, `delete`, `search`...). Hay dos implementaciones:
 

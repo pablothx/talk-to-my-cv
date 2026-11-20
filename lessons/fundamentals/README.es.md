@@ -15,7 +15,7 @@ Tiempo: unos 30 minutos.
 
 ---
 
-## Pieza 1: un LLM no sabe nada de vos
+## Pieza 1 de 12: un LLM no sabe nada de vos
 
 Un LLM (ChatGPT, Claude, el `qwen2.5:3b` que usamos acá) aprendió leyendo internet. Sabe mucho del mundo, pero **no sabe nada de vos**.
 
@@ -26,7 +26,7 @@ Si le preguntás "¿en qué empresas trabajó Valentina Ríos?", pueden pasar do
 
 Lo segundo es lo peligroso, porque no te avisa que está inventando.
 
-## Pieza 2: alucinar no es mentir
+## Pieza 2 de 12: alucinar no es mentir
 
 A eso de inventar se lo llama **alucinar**. Pero ojo: **alucinar no es mentir**.
 
@@ -39,7 +39,7 @@ Si le preguntás dónde trabajó alguien que no conoce, no busca en una base de 
 
 > **Lo peligroso:** la respuesta inventada suena igual de segura que la verdadera. No hay ningún tono que las distinga.
 
-## Pieza 3: qué son los parámetros
+## Pieza 3 de 12: qué son los parámetros
 
 Un LLM es, en el fondo, una función gigante. Pensá en una simple:
 
@@ -64,7 +64,7 @@ Un LLM es lo mismo, pero con **miles de millones** de parámetros, organizados e
 
 Nadie escribió esos números a mano. Cuando hacés `ollama pull qwen2.5:3b` bajás un archivo de unos 2 GB: **ese archivo son los parámetros**. El modelo *es* ese archivo.
 
-## Pieza 4: modelos chicos y modelos grandes
+## Pieza 4 de 12: modelos chicos y modelos grandes
 
 Todos los LLM funcionan igual por dentro: misma arquitectura (*transformer*) y mismo mecanismo (predecir la próxima palabra). Lo que cambia es:
 
@@ -83,7 +83,7 @@ Es como el cerebro de un chico y el de un adulto: mismas neuronas, mismo mecanis
 
 Este tutorial usa el chico porque corre en cualquier compu y es gratis. Como se equivoca más, nos obliga a construir controles de verdad. **Si el sistema anda con un modelo chico, con uno grande anda mejor.**
 
-## Pieza 5: RAG, un examen a libro abierto
+## Pieza 5 de 12: RAG, un examen a libro abierto
 
 La solución a "el modelo no sabe de vos" es simple: **antes de preguntarle al LLM, buscamos en tus documentos los pedazos que tienen que ver con la pregunta**, y se los pasamos con una consigna: *"respondé solo con esto"*.
 
@@ -95,7 +95,7 @@ Esa técnica se llama **RAG** (*Retrieval-Augmented Generation*):
 
 Es como darle a alguien un examen a libro abierto, pero con la página ya marcada.
 
-## Pieza 6: los chunks
+## Pieza 6 de 12: los chunks
 
 Antes de poder buscar, cortamos el CV en pedazos. A cada pedazo se lo llama **chunk**. El CV de ejemplo de este tutorial (Valentina Ríos, una persona ficticia) queda en 19 chunks:
 
@@ -115,7 +115,7 @@ experience/northwind-payments.md § Senior Backend Engineer > Project Lumen
 
 Cortar **cubre todo el documento**: ninguna línea queda afuera. Pero ojo: **guardar todo no es usar todo**. En cada pregunta, el LLM ve solo los 5 chunks más parecidos. Si la respuesta está repartida en 15 chunks (por ejemplo, "¿cuántos años trabajó en total?"), puede contestar mal. Es una limitación propia de RAG.
 
-## Pieza 7: buscar por significado, no por palabras
+## Pieza 7 de 12: buscar por significado, no por palabras
 
 ¿Cómo sabe el sistema qué chunks "tienen que ver" con la pregunta? La forma obvia es buscar palabras, como un Ctrl+F.
 
@@ -126,7 +126,7 @@ Cortar **cubre todo el documento**: ninguna línea queda afuera. Pero ojo: **gua
 
 La solución es buscar por **significado**. Para eso, cada texto se convierte en una lista de números que representa lo que quiere decir. A esa lista se la llama **embedding**.
 
-## Pieza 8: qué es un embedding
+## Pieza 8 de 12: qué es un embedding
 
 Un embedding es **una lista de números** (también se le dice *vector*). Para entenderlo, un ejemplo de juguete: describí cada texto con **3 puntajes** de 0 a 1.
 
@@ -145,7 +145,7 @@ En la realidad hay dos diferencias con el juguete:
 
 Por eso, si mirás un embedding, vas a ver `[-0.028, 0.012, -0.032, ...]` y no vas a entender nada. **Un embedding solo no significa nada; solo sirve para compararlo con otro.** Es como una coordenada GPS: `-34.6, -58.4` no te dice nada hasta que la comparás con otra.
 
-## Pieza 9: comparar dos embeddings (el coseno)
+## Pieza 9 de 12: comparar dos embeddings (el coseno)
 
 Imaginá cada embedding como una **flecha** que sale del centro:
 
@@ -170,7 +170,7 @@ Y se calcula fácil, sin medir ningún ángulo: multiplicás las dos listas posi
 
 Con 1024 números es lo mismo, solo que no lo podemos dibujar.
 
-## Pieza 10: dos modelos distintos
+## Pieza 10 de 12: dos modelos distintos
 
 En este proyecto hay **dos modelos**, y cada uno hace una sola cosa:
 
@@ -185,7 +185,7 @@ Elegimos `bge-m3` porque es **multilingüe**: entiende que "¿qué idiomas habla
 
 > **Una regla de oro:** la pregunta y los chunks tienen que pasar por **el mismo** modelo de embeddings. Cada modelo tiene su propio "idioma de números", y comparar vectores de dos modelos distintos es como comparar coordenadas GPS con direcciones postales.
 
-## Pieza 11: la búsqueda
+## Pieza 11 de 12: la búsqueda
 
 Cuando hacés una pregunta:
 
@@ -217,7 +217,7 @@ Tres cosas para mirar:
 2. **Los números son bajos.** No esperes 0.9: entre una pregunta corta y un pedazo de CV, 0.6 ya es "muy relacionado".
 3. **La búsqueda siempre trae 5, aunque no tengan nada que ver.** El CV no habla de empanadas y aun así devolvió 5 chunks. La búsqueda no sabe decir "no hay nada": solo sabe decir "esto es lo *menos lejano*".
 
-## Pieza 12: el corte
+## Pieza 12 de 12: el corte
 
 El punto 3 es un problema: si esos 5 chunks de "empanadas" llegan al LLM, puede inventar algo. Por eso hay un **corte** (el *umbral de relevancia*):
 

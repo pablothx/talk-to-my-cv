@@ -15,7 +15,7 @@ Time: about 30 minutes.
 
 ---
 
-## Piece 1: an LLM knows nothing about you
+## Piece 1 of 12: an LLM knows nothing about you
 
 An LLM (ChatGPT, Claude, the `qwen2.5:3b` we use here) learned by reading the internet. It knows a lot about the world, but **nothing about you**.
 
@@ -26,7 +26,7 @@ If you ask it "which companies has Valentina Ríos worked at?", one of two thing
 
 The second one is the dangerous one, because it doesn't warn you that it's making things up.
 
-## Piece 2: hallucinating isn't lying
+## Piece 2 of 12: hallucinating isn't lying
 
 Making things up is called **hallucinating**. But careful: **hallucinating isn't lying**.
 
@@ -39,7 +39,7 @@ If you ask where someone it doesn't know worked, it doesn't look anything up: it
 
 > **The danger:** a made-up answer sounds just as confident as a true one. No tone of voice tells them apart.
 
-## Piece 3: what parameters are
+## Piece 3 of 12: what parameters are
 
 Deep down, an LLM is a giant function. Think of a simple one:
 
@@ -64,7 +64,7 @@ Where do those numbers come from? **Training:**
 
 Nobody wrote those numbers by hand. When you run `ollama pull qwen2.5:3b` you download a file of about 2 GB: **that file is the parameters**. The model *is* that file.
 
-## Piece 4: small models and big models
+## Piece 4 of 12: small models and big models
 
 Every LLM works the same way inside: the same architecture (a *transformer*) and the same mechanism (predicting the next word). What changes is:
 
@@ -83,7 +83,7 @@ It's like a child's brain and an adult's: the same neurons and mechanism, but th
 
 This tutorial uses the small one because it runs on any computer and is free. Since it makes more mistakes, it forces us to build real safeguards. **If the system works with a small model, it works better with a big one.**
 
-## Piece 5: RAG, an open-book exam
+## Piece 5 of 12: RAG, an open-book exam
 
 The fix for "the model doesn't know about you" is simple: **before asking the LLM, we search your documents for the pieces related to the question**, and pass them along with an instruction: *"answer only with this"*.
 
@@ -95,7 +95,7 @@ That technique is called **RAG** (*Retrieval-Augmented Generation*):
 
 It's like an open-book exam, with the right page already bookmarked.
 
-## Piece 6: chunks
+## Piece 6 of 12: chunks
 
 Before we can search, we cut the CV into pieces. Each piece is called a **chunk**. This tutorial's example CV (Valentina Ríos, a fictional person) becomes 19 chunks:
 
@@ -115,7 +115,7 @@ Why cut it instead of passing the whole CV?
 
 Cutting **covers the whole document**: no line is left out. But careful: **storing everything isn't using everything**. For each question, the LLM only sees the 5 most similar chunks. If the answer is spread over 15 chunks (for example, "how many years has she worked in total?"), it may answer wrong. That's a built-in limitation of RAG.
 
-## Piece 7: searching by meaning, not by words
+## Piece 7 of 12: searching by meaning, not by words
 
 How does the system know which chunks "are related" to the question? The obvious way is to search for words, like Ctrl+F.
 
@@ -126,7 +126,7 @@ How does the system know which chunks "are related" to the question? The obvious
 
 The fix is to search by **meaning**. For that, every text is turned into a list of numbers that represents what it means. That list is called an **embedding**.
 
-## Piece 8: what an embedding is
+## Piece 8 of 12: what an embedding is
 
 An embedding is **a list of numbers** (also called a *vector*). To get the idea, a toy example: describe each text with **3 scores** from 0 to 1.
 
@@ -145,7 +145,7 @@ Real embeddings differ from the toy in two ways:
 
 So if you look at an embedding, you'll see `[-0.028, 0.012, -0.032, ...]` and understand nothing. **An embedding on its own means nothing; it's only useful to compare with another one.** It's like a GPS coordinate: `-34.6, -58.4` tells you nothing until you compare it with another.
 
-## Piece 9: comparing two embeddings (cosine)
+## Piece 9 of 12: comparing two embeddings (cosine)
 
 Picture each embedding as an **arrow** starting at the center:
 
@@ -170,7 +170,7 @@ And it's easy to compute, without measuring any angle: multiply the two lists po
 
 With 1024 numbers it's the same, we just can't draw it.
 
-## Piece 10: two different models
+## Piece 10 of 12: two different models
 
 This project has **two models**, and each does one job:
 
@@ -185,7 +185,7 @@ We chose `bge-m3` because it's **multilingual**: it understands that "¿qué idi
 
 > **A golden rule:** the question and the chunks must go through **the same** embedding model. Each model has its own "language of numbers", and comparing vectors from two models is like comparing GPS coordinates with street addresses.
 
-## Piece 11: the search
+## Piece 11 of 12: the search
 
 When you ask a question:
 
@@ -217,7 +217,7 @@ Three things to notice:
 2. **The numbers are low.** Don't expect 0.9: between a short question and a piece of CV, 0.6 is already "very related".
 3. **The search always returns 5, even if they're unrelated.** The CV says nothing about empanadas and it still returned 5 chunks. The search can't say "there's nothing": it can only say "this is the *least far*".
 
-## Piece 12: the gate
+## Piece 12 of 12: the gate
 
 Point 3 is a problem: if those 5 "empanada" chunks reach the LLM, it may make something up. That's why there's a **gate** (the *relevance threshold*):
 

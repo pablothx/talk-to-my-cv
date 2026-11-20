@@ -13,7 +13,7 @@ The chat still falls for the JavaScript trap: it answers "No" with citations, wh
 
 ---
 
-## Piece 1: from a function to a graph
+## Piece 1 of 7: from a function to a graph
 
 Until step 6, `answer()` was a top-to-bottom function: search, gate, ask the LLM. Every new step (rewrite, verify) would add an `if`, and the function would get hard to read and test.
 
@@ -32,7 +32,7 @@ LangGraph writes it as a **graph**:
 
 Why LangGraph only now? Because until now the flow was a straight line and didn't need it ([ADR-0003](../../docs/adr/0003-own-seams-no-langchain-before-step-7.md)). Now it has branches.
 
-## Piece 2: the check that didn't work
+## Piece 2 of 7: the check that didn't work
 
 Step 5 called for a check after the search. The obvious idea is to ask the LLM: "does this CONTEXT answer the QUESTION? Reply YES or NO".
 
@@ -49,7 +49,7 @@ We tried it with `qwen2.5:3b` on 6 questions with known answers, with three diff
 
 When in doubt, the model says NO. As a checker, it would refuse questions that have an answer. **A 3B model is a bad judge.**
 
-## Piece 3: the LLM extracts
+## Piece 3 of 7: the LLM extracts
 
 The same model is good at a smaller task: **extracting** the specific name the question asks about.
 
@@ -63,7 +63,7 @@ The same model is good at a smaller task: **extracting** the specific name the q
 
 `NONE` means "this question doesn't name anything specific".
 
-## Piece 4: the code decides
+## Piece 4 of 7: the code decides
 
 Then **the code** checks whether that name appears in the chunks that passed the gate:
 
@@ -82,7 +82,7 @@ It's the signal we found in step 6 ("none of the question's words is in the CV")
 
 > **The pattern:** don't ask a small model to judge. Ask it to extract something concrete, and do the comparison in code, which doesn't make mistakes or get talked into anything.
 
-## Piece 5: when the extractor replies with anything
+## Piece 5 of 7: when the extractor replies with anything
 
 A small model sometimes doesn't reply as asked: it writes a sentence, explains, or lists categories ("technologies"). The code (`parse_terms()`) protects itself:
 
@@ -91,13 +91,13 @@ A small model sometimes doesn't reply as asked: it writes a sentence, explains, 
 
 When in doubt, it **doesn't refuse**: the normal flow goes on. Losing a check is better than refusing a good question.
 
-## Piece 6: rewriting for keyword search
+## Piece 6 of 7: rewriting for keyword search
 
 BM25 doesn't translate: "¿Qué idiomas habla?" shares no words with "Spanish, English, Esperanto". In `keyword` and `hybrid` modes, the graph first asks the LLM to rewrite the question as English keywords, and that's BM25's query.
 
 The **vector** still comes from the original question. That way the threshold still holds, because it was calibrated with questions, not keywords. In `vector` mode there's nothing to rewrite and the node doesn't run.
 
-## Piece 7: same contract, another engine
+## Piece 7 of 7: same contract, another engine
 
 There are now two **engines**, two ways to turn a question into an answer:
 

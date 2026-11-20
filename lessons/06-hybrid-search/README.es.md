@@ -13,7 +13,7 @@ Hasta acá buscábamos solo por significado. En este paso sumamos la búsqueda p
 
 ---
 
-## Pieza 1: dos formas de buscar
+## Pieza 1 de 8: dos formas de buscar
 
 | | Vectores | Palabras (BM25) |
 |---|---|---|
@@ -24,7 +24,7 @@ Hasta acá buscábamos solo por significado. En este paso sumamos la búsqueda p
 
 Cada una es buena donde la otra es mala.
 
-## Pieza 2: qué es BM25
+## Pieza 2 de 8: qué es BM25
 
 BM25 es la búsqueda de texto clásica, la que usan los buscadores hace décadas. Da más puntos a un chunk cuando:
 
@@ -34,7 +34,7 @@ BM25 es la búsqueda de texto clásica, la que usan los buscadores hace décadas
 
 No entiende significados: "nube" y "AWS" son palabras distintas y punto. Pero es exacta: "Java" nunca es "JavaScript".
 
-## Pieza 3: la búsqueda híbrida
+## Pieza 3 de 8: la búsqueda híbrida
 
 La **búsqueda híbrida** corre las dos y combina los resultados:
 
@@ -44,13 +44,13 @@ La **búsqueda híbrida** corre las dos y combina los resultados:
 
 La idea es quedarse con lo mejor de cada una.
 
-## Pieza 4: nuestra hipótesis
+## Pieza 4 de 8: nuestra hipótesis
 
 "Java" y "JavaScript" dan 0.84 para el embedding. Esperábamos que BM25, que compara palabras exactas, arreglara la trampa de JavaScript.
 
 Lo vamos a comprobar con la eval, no con una impresión.
 
-## Pieza 5: OpenSearch
+## Pieza 5 de 8: OpenSearch
 
 **OpenSearch** es un motor de búsqueda (el fork abierto de Elasticsearch). Hace las dos cosas en el mismo lugar: vectores y BM25. Lo sumamos a `compose.yaml`: un nodo, sin seguridad (solo para tu máquina) y 512 MB de memoria.
 
@@ -65,7 +65,7 @@ SEARCH_MODE=hybrid      # vector | keyword | hybrid
 
 El resto del código no se entera, porque `OpenSearchStore` implementa la misma interfaz `VectorStore` del paso 2. pgvector solo hace vectores: si le pedís `hybrid`, falla al arrancar con un mensaje claro ([ADR-0007](../../docs/adr/0007-pgvector-vector-only.md)).
 
-## Pieza 6: un detalle que importa, el score
+## Pieza 6 de 8: un detalle que importa, el score
 
 El umbral del paso 4 compara **similitud coseno**. Pero OpenSearch no la devuelve:
 
@@ -75,7 +75,7 @@ El umbral del paso 4 compara **similitud coseno**. Pero OpenSearch no la devuelv
 
 Si usáramos esos números, el 0.42 calibrado dejaría de tener sentido. Por eso, en todos los stores y modos, **el score es el coseno**, calculado con el vector guardado. El modo solo decide **qué chunks vuelven y en qué orden** ([ADR-0010](../../docs/adr/0010-score-is-cosine-in-every-mode.md)).
 
-## Pieza 7: otro detalle, las palabras vacías
+## Pieza 7 de 8: otro detalle, las palabras vacías
 
 Con el analizador estándar, "Has she worked with JavaScript?" encontraba chunks por "she" y "with". La lista de palabras vacías de Lucene en inglés no incluye "she" ni "has".
 
@@ -86,7 +86,7 @@ Un **analizador** es lo que prepara el texto para BM25. Usamos uno propio que:
 - saca los acentos ("tecnología" = "tecnologia");
 - usa un *stemmer* suave (`kstem`), que lleva las palabras a su raíz ("leads" → "lead").
 
-## Pieza 8: los tests de contrato, ahora con tres stores
+## Pieza 8 de 8: los tests de contrato, ahora con tres stores
 
 Los tests de contrato del paso 2 ahora corren contra **tres** stores (memoria, pgvector y OpenSearch) y exigen lo mismo a los tres, incluido que el score sea exactamente el coseno.
 

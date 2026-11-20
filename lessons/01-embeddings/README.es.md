@@ -12,7 +12,7 @@ Todo RAG empieza acá: convertir texto en números que se puedan comparar. En lo
 
 ---
 
-## Pieza 1: tu primer embedding
+## Pieza 1 de 8: tu primer embedding
 
 ```bash
 make embed TEXT="hola"
@@ -26,7 +26,7 @@ first values: [+0.0094, +0.0229, -0.0431, +0.0009, -0.0314, ...]
 
 Eso es un embedding: **1024 números** que representan el significado de "hola". Ninguno significa nada por sí solo; sirven para compararlos con los de otro texto.
 
-## Pieza 2: compararlos
+## Pieza 2 de 8: compararlos
 
 ```bash
 make similarity A="Trabajé con AWS" B="I worked with AWS"
@@ -36,7 +36,7 @@ Da **0.95**: casi lo mismo, aunque estén en idiomas distintos. Eso es lo que bu
 
 El número es la **similitud coseno**: 1 es "mismo significado", 0 es "nada que ver".
 
-## Pieza 3: el coseno, en código
+## Pieza 3 de 8: el coseno, en código
 
 Está en `src/talk_to_my_cv/embeddings.py`, y son pocas líneas:
 
@@ -55,13 +55,13 @@ Leelo así:
 - **La última línea es la cuenta:** multiplicar posición por posición, sumar (el *producto punto*) y dividir por el largo de las dos flechas (`hypot`). Dividir hace que importe solo la **dirección**, no el tamaño.
 - **Las dos validaciones** evitan errores silenciosos: comparar vectores de distinto tamaño, o dividir por cero.
 
-## Pieza 4: por qué `bge-m3`
+## Pieza 4 de 8: por qué `bge-m3`
 
 Es **multilingüe**: una pregunta en español encuentra un texto en inglés. Por eso el CV de ejemplo está en inglés y las preguntas de evaluación mezclan los dos idiomas.
 
 Además es gratis, corre en CPU y da vectores de 1024 números. No es "el mejor del mundo": los modelos pagos de las nubes suelen ser algo mejores, pero para un CV la diferencia casi no se nota.
 
-## Pieza 5: el `Embedder` y por qué una interfaz propia
+## Pieza 5 de 8: el `Embedder` y por qué una interfaz propia
 
 El código no llama a Ollama directo. Llama a una **interfaz** nuestra:
 
@@ -72,7 +72,7 @@ class Embedder(Protocol):
 
 `OllamaEmbedder` la implementa. ¿Por qué no usar LangChain desde el principio? Porque queremos ver y controlar cada pieza, y porque con una interfaz propia, cambiar a otro proveedor (Bedrock en AWS, por ejemplo) es escribir otra clase de 30 líneas ([ADR-0003](../../docs/adr/0003-own-seams-no-langchain-before-step-7.md)). LangChain entra recién en el paso 7, cuando hay un problema real que lo justifica.
 
-## Pieza 6: dos detalles de `OllamaEmbedder` que importan
+## Pieza 6 de 8: dos detalles de `OllamaEmbedder` que importan
 
 **1. Manda los textos en tandas y devuelve los vectores en el mismo orden.** Parece un detalle, pero si el orden se rompe, en el paso 2 cada pedazo del CV quedaría guardado con el embedding de otro, y **nada avisaría**: las búsquedas devolverían basura con total normalidad.
 
@@ -80,7 +80,7 @@ class Embedder(Protocol):
 
 Los tests unitarios usan un cliente de Ollama falso. Los tests e2e hablan con el `bge-m3` real.
 
-## Pieza 7: lo que un embedding NO captura
+## Pieza 7 de 8: lo que un embedding NO captura
 
 Estos son nuestros resultados con `make similarity`:
 
@@ -98,7 +98,7 @@ Tres cosas para mirar:
 2. **"Azure" puntúa más que el sinónimo.** Comparte casi todas las palabras y el tema. Si alguien pregunta "¿trabajó con Azure?", la búsqueda va a traer el pedazo sobre AWS.
 3. **"Sin relación" no da 0, da 0.45.** Cada modelo tiene su propio rango de scores. Por eso el umbral del paso 4 se configura **por modelo** y se calibra con datos en el paso 5.
 
-## Pieza 8: dos trampas que vamos a perseguir todo el tutorial
+## Pieza 8 de 8: dos trampas que vamos a perseguir todo el tutorial
 
 Salieron de probar con un CV real:
 

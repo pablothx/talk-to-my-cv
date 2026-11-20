@@ -13,7 +13,7 @@ Antes de escribir una línea de RAG, dejamos la máquina lista y comprobamos con
 
 ---
 
-## Pieza 1: las tres piezas de un RAG
+## Pieza 1 de 8: las tres piezas de un RAG
 
 Un RAG necesita tres cosas:
 
@@ -23,7 +23,7 @@ Un RAG necesita tres cosas:
 
 Los dos modelos corren en **Ollama**, un programa que sirve modelos en tu máquina. El código le habla por HTTP, como a cualquier API.
 
-## Pieza 2: qué corre dónde
+## Pieza 2 de 8: qué corre dónde
 
 ```
 tu máquina
@@ -37,7 +37,7 @@ tu máquina
 
 Todo es gratis y local: no hay API keys ni cuentas.
 
-## Pieza 3: las herramientas
+## Pieza 3 de 8: las herramientas
 
 | Herramienta | Qué es | Para qué la usamos |
 |---|---|---|
@@ -48,7 +48,7 @@ Todo es gratis y local: no hay API keys ni cuentas.
 
 Cada `make algo` es un atajo: si querés ver qué hace por dentro, abrí el `Makefile`. `make help` lista todos.
 
-## Pieza 4: los archivos del setup
+## Pieza 4 de 8: los archivos del setup
 
 | Archivo | Para qué |
 |---------|----------|
@@ -61,7 +61,7 @@ Cada `make algo` es un atajo: si querés ver qué hace por dentro, abrí el `Mak
 | `.pre-commit-config.yaml` | En cada commit: **gitleaks** (frena si se te escapa una key) y **ruff** (estilo del código). |
 | `.github/workflows/ci.yml` | En cada push, GitHub corre el linter y los tests unitarios. |
 
-## Pieza 5: el `.env`
+## Pieza 5 de 8: el `.env`
 
 Toda la configuración vive en un archivo `.env`, que **nunca se commitea**. Las más importantes:
 
@@ -75,7 +75,7 @@ KB_DIR=kb.example        # de dónde sale el CV: el de ejemplo, o `kb` para el t
 
 Si escribís un valor inválido (por ejemplo `LLM_PROVIDER=chatgpt`), `config.py` falla al arrancar con un mensaje que te dice qué variable está mal. Mejor fallar al principio que a la mitad.
 
-## Pieza 6: `make doctor`
+## Pieza 6 de 8: `make doctor`
 
 Antes de empezar, `make doctor` revisa todo y te dice qué falta:
 
@@ -90,7 +90,7 @@ Antes de empezar, `make doctor` revisa todo y te dice qué falta:
 
 Si algo falla, te da **una pista concreta** ("corré `ollama pull bge-m3`"). Y si Ollama está caído, no te dice también "falta el modelo": saltea esos chequeos y te da una sola pista útil.
 
-## Pieza 7: dos ideas de diseño que vas a ver en todo el tutorial
+## Pieza 7 de 8: dos ideas de diseño que vas a ver en todo el tutorial
 
 **1. La configuración recibe el entorno como parámetro.** `load_settings(env={...})` en los tests y `load_settings()` en la vida real. Así testeamos defaults y errores sin tocar variables globales:
 
@@ -104,7 +104,7 @@ def test_groq_without_api_key_fails_pointing_to_the_variable():
 
 Las dos son la misma idea: **inyectar lo que viene de afuera**, para poder testear la lógica con piezas falsas. La vas a ver en cada paso.
 
-## Pieza 8: dos niveles de tests
+## Pieza 8 de 8: dos niveles de tests
 
 - **Tests unitarios** (`make test`): usan piezas falsas, corren en milisegundos y son los únicos que corren en GitHub.
 - **Tests e2e** (`make test-e2e`): hablan con Ollama y Postgres de verdad. Nunca comparan el texto exacto de una respuesta, porque un LLM no siempre dice lo mismo ([ADR-0008](../../docs/adr/0008-tests-against-nondeterministic-llms.md)).

@@ -13,7 +13,7 @@ Until now we searched only by meaning. In this step we add the classic **exact-w
 
 ---
 
-## Piece 1: two ways to search
+## Piece 1 of 8: two ways to search
 
 | | Vectors | Keywords (BM25) |
 |---|---|---|
@@ -24,7 +24,7 @@ Until now we searched only by meaning. In this step we add the classic **exact-w
 
 Each one is good where the other is bad.
 
-## Piece 2: what BM25 is
+## Piece 2 of 8: what BM25 is
 
 BM25 is classic text search, the kind search engines have used for decades. It gives a chunk more points when:
 
@@ -34,7 +34,7 @@ BM25 is classic text search, the kind search engines have used for decades. It g
 
 It doesn't understand meaning: "cloud" and "AWS" are just different words. But it's exact: "Java" is never "JavaScript".
 
-## Piece 3: hybrid search
+## Piece 3 of 8: hybrid search
 
 **Hybrid search** runs both and combines the results:
 
@@ -44,13 +44,13 @@ It doesn't understand meaning: "cloud" and "AWS" are just different words. But i
 
 The idea is to keep the best of each.
 
-## Piece 4: our hypothesis
+## Piece 4 of 8: our hypothesis
 
 "Java" and "JavaScript" score 0.84 for the embedding. We expected BM25, which compares exact words, to fix the JavaScript trap.
 
 We'll check it with the eval, not with an impression.
 
-## Piece 5: OpenSearch
+## Piece 5 of 8: OpenSearch
 
 **OpenSearch** is a search engine (the open fork of Elasticsearch). It does both in one place: vectors and BM25. We add it to `compose.yaml`: a single node, no security (your machine only) and 512 MB of memory.
 
@@ -65,7 +65,7 @@ SEARCH_MODE=hybrid      # vector | keyword | hybrid
 
 The rest of the code doesn't notice, because `OpenSearchStore` implements the same `VectorStore` interface from step 2. pgvector only does vectors: if you ask it for `hybrid`, it fails at startup with a clear message ([ADR-0007](../../docs/adr/0007-pgvector-vector-only.md)).
 
-## Piece 6: a detail that matters, the score
+## Piece 6 of 8: a detail that matters, the score
 
 Step 4's threshold compares **cosine similarity**. But OpenSearch doesn't return it:
 
@@ -75,7 +75,7 @@ Step 4's threshold compares **cosine similarity**. But OpenSearch doesn't return
 
 If we used those numbers, the calibrated 0.42 would stop making sense. So, in every store and mode, **the score is the cosine**, computed from the stored vector. The mode only decides **which chunks come back and in what order** ([ADR-0010](../../docs/adr/0010-score-is-cosine-in-every-mode.md)).
 
-## Piece 7: another detail, stopwords
+## Piece 7 of 8: another detail, stopwords
 
 With the standard analyzer, "Has she worked with JavaScript?" found chunks through "she" and "with". Lucene's English stopword list doesn't include "she" or "has".
 
@@ -86,7 +86,7 @@ An **analyzer** is what prepares text for BM25. We use our own, which:
 - strips accents ("tecnología" = "tecnologia");
 - uses a light *stemmer* (`kstem`), which brings words to their root ("leads" → "lead").
 
-## Piece 8: the contract tests, now with three stores
+## Piece 8 of 8: the contract tests, now with three stores
 
 Step 2's contract tests now run against **three** stores (in-memory, pgvector and OpenSearch) and require the same from all three, including that the score is exactly the cosine.
 

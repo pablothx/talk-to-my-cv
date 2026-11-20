@@ -11,7 +11,7 @@ Before changing architecture, read `docs/adr/`. Terms (chunk, section path, rele
 
 ## Lesson format
 
-- Lessons teach from the basics, in short "Piece N" sections: one idea each, a concrete example, real terminal output. A term is explained the first time it appears.
+- Lessons teach from the basics, in short "Piece N of M" sections: one idea each, a concrete example, real terminal output. A term is explained the first time it appears.
 - `lessons/fundamentals/` comes before step 0: concepts only, no code, no tag.
 - Examples use only the fictional persona in `kb.example/`, never the user's real CV.
 - Each lesson ends with an optional FAQ and a "✋ Repaso / Review" section: concept and "🧪 try it" questions, with answers hidden in `<details>`. Then prev · index · next links.

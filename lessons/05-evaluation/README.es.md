@@ -13,7 +13,7 @@ Hasta acá probábamos "a mano": tres preguntas, parece que anda. En este paso m
 
 ---
 
-## Pieza 1: por qué medir
+## Pieza 1 de 10: por qué medir
 
 Un LLM no es determinístico, y cada cambio (el prompt, el umbral, el modelo, cómo se corta el CV) puede arreglar una pregunta y romper otra. Sin una medición:
 
@@ -23,7 +23,7 @@ Un LLM no es determinístico, y cada cambio (el prompt, el umbral, el modelo, c�
 
 Una **eval** es un examen fijo: siempre las mismas preguntas, con lo que se espera de cada una.
 
-## Pieza 2: las preguntas
+## Pieza 2 de 10: las preguntas
 
 `eval/questions.yaml` tiene 20 preguntas sobre Valentina, 10 en inglés y 10 en español. Hay cuatro tipos:
 
@@ -65,7 +65,7 @@ Qué es cada campo:
 
 ¿Por qué `must_contain` y no comparar con `expected_answer`? Porque el LLM redacta distinto cada vez: "de 9 horas a 14 minutos" y "bajó a 14 minutes" son las dos correctas. Comparar el texto entero fallaría siempre. Se piden solo los datos que no se pueden adivinar.
 
-## Pieza 3: las trampas
+## Pieza 3 de 10: las trampas
 
 Tres preguntas están marcadas como **trampas**, las que venimos persiguiendo:
 
@@ -77,7 +77,7 @@ Fallan a propósito con búsqueda vectorial, así que se reportan aparte y no cu
 
 Un test valida el YAML en cada push: mínimos por tipo, los dos idiomas, y que cada fuente esperada exista de verdad en los chunks. Si alguien cambia un título del CV y rompe una pregunta, se entera.
 
-## Pieza 4: las métricas de la búsqueda
+## Pieza 4 de 10: las métricas de la búsqueda
 
 Dos métricas miden **solo la búsqueda**, sin el LLM, sobre las preguntas que tienen respuesta:
 
@@ -107,7 +107,7 @@ hit@5 dice "lo encontró siempre"; MRR agrega "pero no siempre arriba".
 
 No son inventos nuestros: son métricas clásicas de *information retrieval* (la disciplina de los buscadores). MRR viene de las competencias TREC de búsqueda de respuestas, de fines de los 90; hit@k también se llama *hit rate*, *recall@k* o *top-k accuracy*. Frameworks de RAG como LlamaIndex las traen de fábrica. Lo nuestro es solo la implementación.
 
-## Pieza 5: las métricas del sistema completo
+## Pieza 5 de 10: las métricas del sistema completo
 
 Dos métricas miden **todo**, con el LLM, sobre las 17 preguntas que no son trampa (las 3 trampas se reportan aparte):
 
@@ -117,7 +117,7 @@ Dos métricas miden **todo**, con el LLM, sobre las 17 preguntas que no son tram
 
 La pareja importa: si la búsqueda anda (hit@5 = 1.00) pero el sistema falla, el problema está después de la búsqueda.
 
-## Pieza 6: calibrar el umbral, primero sin LLM
+## Pieza 6 de 10: calibrar el umbral, primero sin LLM
 
 `make eval-sweep` hace **una búsqueda por pregunta, sin LLM**, y prueba todos los umbrales entre 0.35 y 0.65. Para cada uno calcula cuántas preguntas sin respuesta rechazaría y cuántas con respuesta dejaría pasar. Tarda 9 segundos.
 
@@ -135,7 +135,7 @@ Si las dos curvas se separaran limpias, habría un umbral perfecto. No: hay preg
 
 Ningún número separa los "sí" de los "no".
 
-## Pieza 7: el mejor en los papeles no es el mejor
+## Pieza 7 de 10: el mejor en los papeles no es el mejor
 
 Mirando solo el corte, el mejor umbral es **0.49**: rechaza todas las preguntas sin respuesta, pero también 3 que sí tenían. Corrimos la eval completa, con el LLM, en los dos candidatos:
 
@@ -150,13 +150,13 @@ Mirando solo el corte, el mejor umbral es **0.49**: rechaza todas las preguntas 
 
 Por eso el barrido solo **propone** candidatos y la eval completa **decide** ([ADR-0009](../../docs/adr/0009-top1-gate-does-not-separate-alone.md)). Quedó `relevance_threshold: 0.42`.
 
-## Pieza 8: no llegamos al objetivo, y está bien decirlo
+## Pieza 8 de 10: no llegamos al objetivo, y está bien decirlo
 
 El objetivo era refusal accuracy ≥ 0.9. Llegamos a **0.88**.
 
 No lo vamos a "arreglar" tocando el CV o el prompt hasta que pase, porque eso sería hacer trampa con el examen (pieza 9). El paso 7 agrega una verificación después de la búsqueda.
 
-## Pieza 9: el sobreajuste
+## Pieza 9 de 10: el sobreajuste
 
 Calibramos el umbral **con las mismas 20 preguntas** con las que después reportamos los resultados. Eso se llama **sobreajustar** (*overfitting*): elegimos lo que mejor funciona con *estas* preguntas, y nada garantiza que funcione igual con preguntas nuevas.
 
@@ -172,7 +172,7 @@ Tres matices:
 - **El riesgo crece con cada perilla.** Acá ajustamos una sola (el umbral). Si además ajustás el prompt, `k`, los pesos del híbrido y el tamaño de chunk mirando las mismas preguntas, cada una suma un poco de "blanco dibujado".
 - **Ni 500 preguntas sobre Valentina calibran tu CV.** Otro documento tiene otro estilo y otros scores. Para calibrar el tuyo hacen falta preguntas sobre tu CV, y hoy la eval corre siempre sobre el de ejemplo (ver la pregunta frecuente "¿Puedo evaluar con mi propio CV?"). Mientras tanto, probá a mano con `RELEVANCE_THRESHOLD`.
 
-## Pieza 10: dónde quedan los resultados
+## Pieza 10 de 10: dónde quedan los resultados
 
 Cada corrida escribe dos archivos en `eval/results/`, y **se commitean**:
 

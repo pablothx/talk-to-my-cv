@@ -14,11 +14,11 @@ In this step we turn the CV into database rows: each row is a piece with its tex
 
 ---
 
-## Piece 1: why cut
+## Piece 1 of 10: why cut
 
 If you embed a whole CV into a single vector, that vector is about "a bit of everything" and doesn't look much like any concrete question. So we cut the document into small pieces, each with a clear topic, and embed each one.
 
-## Piece 2: the example CV
+## Piece 2 of 10: the example CV
 
 `kb.example/` is the CV of **Valentina Ríos**, a fictional person. It's 6 Markdown files:
 
@@ -35,7 +35,7 @@ kb.example/
 
 It has **planted facts**: things impossible to guess, like Project Lumen cutting reconciliation "from 9 hours to 14 minutes". If the chat answers that, we know it read it from the document and didn't make it up. It also has **traps** for the evaluation (step 5).
 
-## Piece 3: how we cut
+## Piece 3 of 10: how we cut
 
 We cut **by Markdown headings**, which is how a person already organized their CV:
 
@@ -45,7 +45,7 @@ We cut **by Markdown headings**, which is how a person already organized their C
 
 Every line of the document lands in some chunk: nothing is lost. Valentina's CV becomes **19 chunks**.
 
-## Piece 4: the frontmatter
+## Piece 4 of 10: the frontmatter
 
 Each file starts with a data block, the *frontmatter*:
 
@@ -63,7 +63,7 @@ tags: [java, aws, kafka, payments]
 
 It's copied as `metadata` into every chunk of the file. The `title` is used in the heading path (piece 6). The rest is stored but **not used for search today**: it's ready for future filtering (for example, "experience only" or "this person only") without re-ingesting.
 
-## Piece 5: the table
+## Piece 5 of 10: the table
 
 Each chunk is a row in the `chunks` table in Postgres:
 
@@ -89,7 +89,7 @@ docker compose exec postgres psql -U postgres -d talk_to_my_cv
 select file, section from chunks;
 ```
 
-## Piece 6: why `embed_text` starts with the headings
+## Piece 6 of 10: why `embed_text` starts with the headings
 
 The Project Lumen chunk says *"Led Project Lumen, a ledger reconciliation engine..."*. Nowhere does it say **Northwind Payments**: that's in the file's title.
 
@@ -103,7 +103,7 @@ Led Project Lumen, a ledger reconciliation engine...
 
 And the LLM gets **the same**: if search found the chunk thanks to "Northwind", the LLM must be able to read "Northwind". We learned that the hard way in step 5.
 
-## Piece 7: idempotent ingestion
+## Piece 7 of 10: idempotent ingestion
 
 Embedding is the expensive part. We don't want to re-embed everything when a comma changes. Each chunk has two fingerprints:
 
@@ -124,7 +124,7 @@ kb.example: 19 added, 0 updated, 0 unchanged, 0 deleted      ← the first time
 kb.example: 0 added, 0 updated, 19 unchanged, 0 deleted      ← the second
 ```
 
-## Piece 8: the model lock
+## Piece 8 of 10: the model lock
 
 The database records which model built it, in another table, `kb_meta`:
 
@@ -143,7 +143,7 @@ different models can't be compared: run `make ingest REBUILD=1` to start over.
 
 Mixing vectors from two models would give searches that **look like they work but return junk**. A loud error beats a silent one ([ADR-0005](../../docs/adr/0005-chunk-identity-and-embedding-model-lock.md)).
 
-## Piece 9: your CV as a PDF
+## Piece 9 of 10: your CV as a PDF
 
 If you put a PDF in `kb/`, ingestion converts it to Markdown **in memory**, with fixed rules and **no LLM** (so nothing can be made up):
 
@@ -153,7 +153,7 @@ If you put a PDF in `kb/`, ingestion converts it to Markdown **in memory**, with
 
 Files inside folders starting with `_` (like `kb/_drafts/`) are skipped.
 
-## Piece 10: the stores and the contract tests
+## Piece 10 of 10: the stores and the contract tests
 
 The code doesn't talk to Postgres directly, but to an interface, `VectorStore` (`upsert`, `delete`, `search`...). There are two implementations:
 

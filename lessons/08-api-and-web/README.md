@@ -12,7 +12,7 @@ Until now the chat lived in the terminal. In this step we turn it into an **HTTP
 
 ---
 
-## Piece 1: the API in one line
+## Piece 1 of 7: the API in one line
 
 ```bash
 make serve
@@ -33,7 +33,7 @@ curl -s localhost:8000/api/ask -H 'content-type: application/json' \
 
 And if you open http://localhost:8000 in the browser, there's a page with a form.
 
-## Piece 2: the endpoints
+## Piece 2 of 7: the endpoints
 
 | Route | What it does |
 |---|---|
@@ -44,7 +44,7 @@ And if you open http://localhost:8000 in the browser, there's a page with a form
 
 The API validates the question **before** calling any model: empty or over 500 characters returns **422** (validation error). A refusal is a normal answer (**200**, `"refused": true`), not an error.
 
-## Piece 3: inject the function, not the models
+## Piece 3 of 7: inject the function, not the models
 
 The API knows nothing about embeddings, stores or LLMs. It gets **a single function**:
 
@@ -57,7 +57,7 @@ create_app(ask)  # ask: question → Answer
 
 So the API tests run in milliseconds and on GitHub, without Ollama. It's the same idea as step 0: **inject what comes from outside**.
 
-## Piece 4: a new risk, XSS
+## Piece 4 of 7: a new risk, XSS
 
 In step 3 we saw prompt injection: someone writes instructions for the model in the question. Now there's a new risk.
 
@@ -67,7 +67,7 @@ And it's worse: the page shows the question again, so you don't even need to foo
 
 > **An LLM's answer is untrusted input**, just like what a user types.
 
-## Piece 5: two defenses
+## Piece 5 of 7: two defenses
 
 Each one is enough on its own, and we have both:
 
@@ -76,7 +76,7 @@ Each one is enough on its own, and we have both:
 
 Without JavaScript, the form does a plain POST and the server returns the page with the answer. It's less pretty than a chat that types word by word, but there's nothing to inject.
 
-## Piece 6: the API in a container
+## Piece 6 of 7: the API in a container
 
 Until now all the Python ran on your machine. The API is the app's first container:
 
@@ -89,7 +89,7 @@ make api-down
 - `.dockerignore` is an **allowlist**: only the code, the config and the dependencies get in. **`.env` and `kb/` (your real data) never get into the image.**
 - Inside Docker, the API talks to Postgres and OpenSearch by service name (`postgres`, `opensearch`), and to Ollama, which runs on your machine, through `host.docker.internal`.
 
-## Piece 7: the Linux problem
+## Piece 7 of 7: the Linux problem
 
 On macOS and Windows (Docker Desktop), `host.docker.internal` just works. **On Linux, it doesn't:** it points to the Docker network's IP (172.17.0.1), and Ollama only listens on `127.0.0.1`. The connection is refused.
 

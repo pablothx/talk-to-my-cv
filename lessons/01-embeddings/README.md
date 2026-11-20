@@ -12,7 +12,7 @@ Every RAG starts here: turning text into numbers that can be compared. You saw t
 
 ---
 
-## Piece 1: your first embedding
+## Piece 1 of 8: your first embedding
 
 ```bash
 make embed TEXT="hola"
@@ -26,7 +26,7 @@ first values: [+0.0094, +0.0229, -0.0431, +0.0009, -0.0314, ...]
 
 That's an embedding: **1024 numbers** that represent the meaning of "hola". None of them means anything on its own; they're useful to compare with another text's.
 
-## Piece 2: comparing them
+## Piece 2 of 8: comparing them
 
 ```bash
 make similarity A="Trabajé con AWS" B="I worked with AWS"
@@ -36,7 +36,7 @@ It gives **0.95**: almost the same, even though they're in different languages. 
 
 The number is the **cosine similarity**: 1 is "same meaning", 0 is "unrelated".
 
-## Piece 3: cosine, in code
+## Piece 3 of 8: cosine, in code
 
 It's in `src/talk_to_my_cv/embeddings.py`, and it's a few lines:
 
@@ -55,13 +55,13 @@ Read it like this:
 - **The last line is the math:** multiply position by position, add it up (the *dot product*) and divide by the length of both arrows (`hypot`). Dividing makes only the **direction** matter, not the size.
 - **The two checks** prevent silent errors: comparing vectors of different sizes, or dividing by zero.
 
-## Piece 4: why `bge-m3`
+## Piece 4 of 8: why `bge-m3`
 
 It's **multilingual**: a question in Spanish finds a text in English. That's why the example CV is in English and the eval questions mix both languages.
 
 It's also free, runs on a CPU and returns 1024-number vectors. It isn't "the best in the world": the clouds' paid models tend to be a bit better, but for a CV the difference is hard to notice.
 
-## Piece 5: the `Embedder`, and why our own interface
+## Piece 5 of 8: the `Embedder`, and why our own interface
 
 The code doesn't call Ollama directly. It calls an **interface** of ours:
 
@@ -72,7 +72,7 @@ class Embedder(Protocol):
 
 `OllamaEmbedder` implements it. Why not use LangChain from the start? Because we want to see and control every piece, and because with our own interface, moving to another provider (Bedrock on AWS, for example) means writing one more small class ([ADR-0003](../../docs/adr/0003-own-seams-no-langchain-before-step-7.md)). LangChain only comes in at step 7, when there's a real problem that justifies it.
 
-## Piece 6: two details of `OllamaEmbedder` that matter
+## Piece 6 of 8: two details of `OllamaEmbedder` that matter
 
 **1. It sends texts in batches and returns the vectors in the same order.** It looks like a detail, but if the order broke, in step 2 every piece of the CV would be stored with another piece's embedding, and **nothing would warn you**: searches would return junk as if all were normal.
 
@@ -80,7 +80,7 @@ class Embedder(Protocol):
 
 The unit tests use a fake Ollama client. The e2e tests talk to the real `bge-m3`.
 
-## Piece 7: what an embedding does NOT capture
+## Piece 7 of 8: what an embedding does NOT capture
 
 These are our results with `make similarity`:
 
@@ -98,7 +98,7 @@ Three things to notice:
 2. **"Azure" scores higher than the synonym.** It shares almost every word and the topic. If someone asks "has she worked with Azure?", search will bring the AWS piece.
 3. **"Unrelated" doesn't score 0, it scores 0.45.** Each model has its own score range. That's why step 4's threshold is set **per model** and calibrated with data in step 5.
 
-## Piece 8: two traps we'll chase through the whole tutorial
+## Piece 8 of 8: two traps we'll chase through the whole tutorial
 
 They came from testing with a real CV:
 

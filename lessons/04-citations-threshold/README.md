@@ -12,7 +12,7 @@ The chat answers now. In this step we do two things: every answer says **where i
 
 ---
 
-## Piece 1: citations the LLM doesn't make up
+## Piece 1 of 6: citations the LLM doesn't make up
 
 We could ask the LLM to cite its sources. But a 3B model easily invents or mangles labels.
 
@@ -27,7 +27,7 @@ Sources:
 
 If the LLM refuses, there are no citations: there's no point showing sources for an "I don't have that information".
 
-## Piece 2: the gate
+## Piece 2 of 6: the gate
 
 ```
 question ──► search ──► does the top-1 reach the threshold?
@@ -41,7 +41,7 @@ question ──► search ──► does the top-1 reach the threshold?
 - If **no** chunk reaches the threshold → fixed refusal, and the LLM **isn't called**.
 - If some do → **only those** go to the LLM. The rest are dropped.
 
-## Piece 3: why refuse before the LLM
+## Piece 3 of 6: why refuse before the LLM
 
 Refusing without calling the LLM has three advantages ([ADR-0006](../../docs/adr/0006-relevance-gate-before-llm.md)):
 
@@ -49,7 +49,7 @@ Refusing without calling the LLM has three advantages ([ADR-0006](../../docs/adr
 2. it's **free**: no 10 seconds of CPU (or cloud tokens to pay for);
 3. it **can't be talked into anything** with a clever prompt. An "ignore your rules" doesn't pass the gate because it doesn't look like anything in the CV.
 
-## Piece 4: where the threshold lives
+## Piece 4 of 6: where the threshold lives
 
 The threshold is in `config/models.yaml`, **one per embedding model**, because each model has its own score range (step 1):
 
@@ -70,7 +70,7 @@ RELEVANCE_THRESHOLD=0.5 make ask Q="..."
 
 Or set it for yourself with a `RELEVANCE_THRESHOLD=0.40` line in your `.env`.
 
-## Piece 5: which language to refuse in, without the LLM?
+## Piece 5 of 6: which language to refuse in, without the LLM?
 
 If we don't call the LLM, nobody knows the question's language. `detect_language()` (in `language.py`) is a tiny detector:
 
@@ -83,7 +83,7 @@ If it isn't sure (for example, with "Kubernetes?"), the refusal comes in both la
 No tengo esa información. / I don't have that information.
 ```
 
-## Piece 6: `DEBUG=1` now shows the gate
+## Piece 6 of 6: `DEBUG=1` now shows the gate
 
 ```bash
 make ask DEBUG=1 Q="¿Usó Kubernetes?"
