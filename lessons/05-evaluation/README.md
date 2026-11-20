@@ -48,6 +48,23 @@ A question looks like this:
   must_contain: ["14 minutes"]
 ```
 
+What each field is:
+
+| Field | What it is | Does the code use it? |
+|---|---|---|
+| `id` | A short name to find it in the results. | Only for display. |
+| `type` | One of the four types above. Decides whether it must answer or refuse. | Yes |
+| `lang` | The question's language: `es` or `en`. | Yes, with `check_language`. |
+| `question` | The question, exactly as the chat gets it. | Yes |
+| `expected_sources` | The file and section holding the answer, exactly as the chunker builds them. | Yes: for hit@5 and MRR. |
+| `expected_answer` | The right answer, in words. | **No.** It's for a person to read. |
+| `must_contain` | The key facts that must appear in the answer. All of them, case-insensitive. | Yes: for answer accuracy. |
+| `check_language` | If `true`, the answer must be in the `lang` language. 3 questions have it. | Yes |
+| `forbid_unsupported_no` | If `true`, a "no" is a hallucination: the CV says nothing, so only a refusal is right. Azure and JavaScript have it. | Yes |
+| `trap` | Marks a deliberate trap (piece 3). | Yes: reported apart. |
+
+Why `must_contain` and not compare against `expected_answer`? Because the LLM words it differently every time: "from 9 hours to 14 minutes" and "cut it to 14 minutes" are both right. Comparing the whole text would always fail. We only require the facts that can't be guessed.
+
 ## Piece 3: the traps
 
 Three questions are marked as **traps**, the ones we've been chasing:

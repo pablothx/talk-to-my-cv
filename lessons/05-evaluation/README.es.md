@@ -48,6 +48,23 @@ Una pregunta se ve así:
   must_contain: ["14 minutes"]
 ```
 
+Qué es cada campo:
+
+| Campo | Qué es | ¿Lo usa el código? |
+|---|---|---|
+| `id` | Un nombre corto para encontrarla en los resultados. | Solo para mostrar. |
+| `type` | Uno de los cuatro tipos de arriba. Decide si tiene que responder o rechazar. | Sí |
+| `lang` | El idioma de la pregunta: `es` o `en`. | Sí, con `check_language`. |
+| `question` | La pregunta, tal cual se le hace al chat. | Sí |
+| `expected_sources` | El archivo y la sección donde está la respuesta, exactamente como los arma el chunker. | Sí: para hit@5 y MRR. |
+| `expected_answer` | La respuesta correcta, en palabras. | **No.** Es para que la lea una persona. |
+| `must_contain` | Los datos clave que tienen que aparecer en la respuesta. Todos, sin importar mayúsculas. | Sí: para answer accuracy. |
+| `check_language` | Si es `true`, la respuesta tiene que estar en el idioma de `lang`. Lo tienen 3 preguntas. | Sí |
+| `forbid_unsupported_no` | Si es `true`, un "no" es alucinación: el CV no dice nada, así que lo único correcto es rechazar. Lo tienen Azure y JavaScript. | Sí |
+| `trap` | Marca una trampa a propósito (pieza 3). | Sí: se reporta aparte. |
+
+¿Por qué `must_contain` y no comparar con `expected_answer`? Porque el LLM redacta distinto cada vez: "de 9 horas a 14 minutos" y "bajó a 14 minutes" son las dos correctas. Comparar el texto entero fallaría siempre. Se piden solo los datos que no se pueden adivinar.
+
 ## Pieza 3: las trampas
 
 Tres preguntas están marcadas como **trampas**, las que venimos persiguiendo:
