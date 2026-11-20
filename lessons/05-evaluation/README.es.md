@@ -164,6 +164,14 @@ Es como estudiar con el examen ya resuelto: te va bien en ese examen, no necesar
 
 Con 20 preguntas, mover una sola cambia las métricas un 5%. Por eso 0.88 es un número **optimista**. Lo correcto es separar las preguntas en dos grupos: uno para calibrar y otro, que nunca miraste, para reportar. Con 20 no alcanza para separar; con 100, sí.
 
+Otra imagen: tirás un dardo, y **después** dibujás el blanco alrededor de donde cayó. El pleno es real, pero no prueba puntería.
+
+Tres matices:
+
+- **Más preguntas ayudan,** pero no reemplazan la separación: ajustar con 500 y reportar con las mismas 500 sigue siendo optimista, solo que menos.
+- **El riesgo crece con cada perilla.** Acá ajustamos una sola (el umbral). Si además ajustás el prompt, `k`, los pesos del híbrido y el tamaño de chunk mirando las mismas preguntas, cada una suma un poco de "blanco dibujado".
+- **Ni 500 preguntas sobre Valentina calibran tu CV.** Otro documento tiene otro estilo y otros scores. Con tu CV, escribí algunas preguntas propias y volvé a correr `make eval-sweep`.
+
 ## Pieza 10: dónde quedan los resultados
 
 Cada corrida escribe dos archivos en `eval/results/`, y **se commitean**:

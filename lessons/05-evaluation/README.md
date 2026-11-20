@@ -164,6 +164,14 @@ It's like studying with the solved exam in hand: you do well on that exam, not n
 
 With 20 questions, moving a single one shifts the metrics by 5%. That's why 0.88 is an **optimistic** number. The right practice is to split the questions into two groups: one to calibrate and one, never looked at, to report. 20 isn't enough to split; 100 is.
 
+Another picture: you throw a dart, and **then** you draw the target around where it landed. The bullseye is real, but it proves no aim.
+
+Three nuances:
+
+- **More questions help,** but they don't replace the split: tuning on 500 and reporting on the same 500 is still optimistic, just less so.
+- **The risk grows with every knob.** Here we tuned just one (the threshold). If you also tune the prompt, `k`, the hybrid weights and the chunk size while looking at the same questions, each one adds a bit of "target drawn afterwards".
+- **Not even 500 questions about Valentina calibrate your CV.** Another document has another style and other scores. With your CV, write a few questions of your own and run `make eval-sweep` again.
+
 ## Piece 10: where results go
 
 Every run writes two files to `eval/results/`, and **they're committed**:
