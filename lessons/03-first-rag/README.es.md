@@ -19,6 +19,8 @@ Ya tenemos el CV cortado y guardado. Ahora sumamos el LLM: buscamos los pedazos,
 pregunta ──► embedding ──► búsqueda (top 5) ──► prompt con contexto ──► LLM ──► respuesta
 ```
 
+A esta cadena fija de pasos la llamamos **pipeline**: como una cinta de fábrica, cada estación hace una sola cosa y le pasa el resultado a la siguiente, siempre en el mismo orden. Vive en una sola función, `answer()` en `rag.py`, y los pasos 4 a 6 le suman estaciones (el corte, las citas, otra búsqueda). En el paso 7 aparece un segundo motor, el **grafo**, con desvíos.
+
 Probalo:
 
 ```bash

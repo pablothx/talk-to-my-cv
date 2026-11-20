@@ -19,6 +19,8 @@ The CV is already cut and stored. Now we add the LLM: we search for the pieces, 
 question ──► embedding ──► search (top 5) ──► prompt with context ──► LLM ──► answer
 ```
 
+We call this fixed chain of steps the **pipeline**: like a factory line, each station does one thing and hands its result to the next, always in the same order. It lives in a single function, `answer()` in `rag.py`, and steps 4 to 6 add stations to it (the gate, citations, another search). Step 7 brings a second engine, the **graph**, which has detours.
+
 Try it:
 
 ```bash

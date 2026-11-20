@@ -99,6 +99,11 @@ El **vector** sigue saliendo de la pregunta original. Así el umbral sigue valie
 
 ## Pieza 7: mismo contrato, otro motor
 
+Ahora hay dos **motores** (*engines*), dos formas de convertir una pregunta en respuesta:
+
+- **pipeline**: la cadena fija de los pasos 3 a 6, `answer()` en `rag.py`. Siempre los mismos pasos, en el mismo orden.
+- **graph**: el grafo de este paso, `answer_with_graph()` en `graph.py`, con desvíos (reformular, verificar).
+
 `answer_with_graph()` recibe los mismos argumentos y devuelve el mismo `Answer` que `answer()`. Por eso el chat, la eval y la API no saben cuál están usando:
 
 ```bash

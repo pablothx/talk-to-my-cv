@@ -99,6 +99,11 @@ The **vector** still comes from the original question. That way the threshold st
 
 ## Piece 7: same contract, another engine
 
+There are now two **engines**, two ways to turn a question into an answer:
+
+- **pipeline**: the fixed chain from steps 3 to 6, `answer()` in `rag.py`. Always the same steps, in the same order.
+- **graph**: this step's graph, `answer_with_graph()` in `graph.py`, with detours (rewrite, verify).
+
 `answer_with_graph()` takes the same arguments and returns the same `Answer` as `answer()`. So the chat, the eval and the API don't know which one they're using:
 
 ```bash

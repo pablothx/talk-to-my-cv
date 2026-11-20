@@ -32,6 +32,18 @@ _Avoid_: keyword, entity
 The fixed reply given when the relevance gate fails or the question is off-topic.
 _Avoid_: fallback, error, "I don't know"
 
+**Pipeline**:
+The fixed chain that turns a question into an answer: embed, search, relevance gate, LLM, citations. Always the same steps in the same order (`rag.answer`, steps 3–6).
+_Avoid_: chain, flow
+
+**Graph**:
+The step 7 engine: the same job as the pipeline, written as LangGraph nodes with conditional routing (rewrite, verify) (`graph.answer_with_graph`).
+_Avoid_: agent, workflow
+
+**Engine**:
+Which of the two turns questions into answers, picked with `ENGINE=pipeline|graph`. Both take the same arguments and return the same `Answer`.
+_Avoid_: backend, mode
+
 **Planted fact**:
 A fact that exists only in the KB and is unguessable from general knowledge. It proves that an answer came from the documents.
 _Avoid_: canary, trap
