@@ -170,7 +170,7 @@ Three nuances:
 
 - **More questions help,** but they don't replace the split: tuning on 500 and reporting on the same 500 is still optimistic, just less so.
 - **The risk grows with every knob.** Here we tuned just one (the threshold). If you also tune the prompt, `k`, the hybrid weights and the chunk size while looking at the same questions, each one adds a bit of "target drawn afterwards".
-- **Not even 500 questions about Valentina calibrate your CV.** Another document has another style and other scores. With your CV, write a few questions of your own and run `make eval-sweep` again.
+- **Not even 500 questions about Valentina calibrate your CV.** Another document has another style and other scores. Calibrating yours takes questions about your CV, and today the eval always runs on the example one (see the FAQ "Can I evaluate with my own CV?"). Meanwhile, try values by hand with `RELEVANCE_THRESHOLD`.
 
 ## Piece 10: where results go
 

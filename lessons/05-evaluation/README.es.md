@@ -170,7 +170,7 @@ Tres matices:
 
 - **Más preguntas ayudan,** pero no reemplazan la separación: ajustar con 500 y reportar con las mismas 500 sigue siendo optimista, solo que menos.
 - **El riesgo crece con cada perilla.** Acá ajustamos una sola (el umbral). Si además ajustás el prompt, `k`, los pesos del híbrido y el tamaño de chunk mirando las mismas preguntas, cada una suma un poco de "blanco dibujado".
-- **Ni 500 preguntas sobre Valentina calibran tu CV.** Otro documento tiene otro estilo y otros scores. Con tu CV, escribí algunas preguntas propias y volvé a correr `make eval-sweep`.
+- **Ni 500 preguntas sobre Valentina calibran tu CV.** Otro documento tiene otro estilo y otros scores. Para calibrar el tuyo hacen falta preguntas sobre tu CV, y hoy la eval corre siempre sobre el de ejemplo (ver la pregunta frecuente "¿Puedo evaluar con mi propio CV?"). Mientras tanto, probá a mano con `RELEVANCE_THRESHOLD`.
 
 ## Pieza 10: dónde quedan los resultados
 
